@@ -97,7 +97,8 @@ class SocialShareService {
   }
 
   /// Downloads the badge PNG, copies caption and hashtag to clipboard,
-  /// invokes native Web Share API if supported, and presents the Instagram guidance dialog.
+  /// invokes native Web Share API with file if supported (for direct Instagram Stories sharing),
+  /// and presents the Instagram guidance dialog as fallback.
   static Future<void> shareToInstagram(
     BuildContext context, {
     required GlobalKey boundaryKey,
@@ -109,7 +110,27 @@ class SocialShareService {
         : shareCaption;
     final activeHashtag = config?.hashtag ?? officialHashtag;
 
-    // 1. Download the high-res badge image
+    final sanitized = attendeeName
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'\s+'), '_')
+        .replaceAll(RegExp(r'[^a-z0-9_]'), '');
+    final eventSlug = (config != null)
+        ? config.eventName
+            .trim()
+            .toLowerCase()
+            .replaceAll(RegExp(r'\s+'), '_')
+            .replaceAll(RegExp(r'[^a-z0-9_]'), '')
+        : 'devfest';
+    final fileName =
+        'badge_${eventSlug}_${sanitized.isEmpty ? 'attendee' : sanitized}.png';
+
+    // 1. Capture the high-res badge image bytes
+    final bytes = await captureWidgetPng(boundaryKey: boundaryKey);
+
+    if (!context.mounted) return;
+
+    // 2. Download the badge image to local camera roll/downloads
     await downloadBadge(
       context,
       boundaryKey: boundaryKey,
@@ -117,27 +138,49 @@ class SocialShareService {
       config: config,
     );
 
-    // 2. Copy caption with official hashtag to clipboard
+    // 3. Copy caption with official hashtag to clipboard
     await Clipboard.setData(ClipboardData(text: activeCaption));
 
-    // 3. Try native Web Share API (Safari iOS / Android Chrome)
-    if (kIsWeb) {
+    // 4. Try native Web Share API Level 2 with attached File (Safari iOS / Android Chrome)
+    // Passing the actual image File allows native OS to list Instagram Stories in the share sheet!
+    bool sharedViaNative = false;
+    if (kIsWeb && bytes != null) {
       try {
         final nav = html.window.navigator as dynamic;
-        if (nav != null && nav.share != null) {
-          await nav.share({
-            'title': config?.eventName ?? 'EventBooth',
-            'text': activeCaption,
-            'url': html.window.location.href,
-          });
+        if (nav != null) {
+          final file = html.File([bytes], fileName, {'type': 'image/png'});
+          bool canShareFiles = false;
+          try {
+            canShareFiles =
+                nav.canShare != null && nav.canShare({'files': [file]}) == true;
+          } catch (_) {
+            canShareFiles = false;
+          }
+
+          if (canShareFiles) {
+            await nav.share({
+              'files': [file],
+              'title': config?.eventName ?? 'EventBooth',
+              'text': activeCaption,
+            });
+            sharedViaNative = true;
+          } else if (nav.share != null) {
+            await nav.share({
+              'title': config?.eventName ?? 'EventBooth',
+              'text': activeCaption,
+              'url': html.window.location.href,
+            });
+            sharedViaNative = true;
+          }
         }
-      } catch (_) {
+      } catch (e) {
         // Fallback gracefully to modal if Web Share is dismissed or unsupported
+        debugPrint('SocialShareService.shareToInstagram Web Share dismissed or error: $e');
       }
     }
 
-    // 4. Show Instagram Share Dialog
-    if (context.mounted) {
+    // 5. Show Instagram Stories Share Guide Dialog
+    if (context.mounted && !sharedViaNative) {
       showDialog(
         context: context,
         builder: (ctx) => _InstagramShareGuideDialog(hashtag: activeHashtag),
@@ -307,8 +350,19 @@ class _InstagramShareGuideDialog extends StatelessWidget {
                     child: ElevatedButton.icon(
                       onPressed: () {
                         if (kIsWeb) {
-                          html.window
-                              .open('https://www.instagram.com', '_blank');
+                          final userAgent =
+                              html.window.navigator.userAgent.toLowerCase();
+                          final isMobile = userAgent.contains('mobile') ||
+                              userAgent.contains('iphone') ||
+                              userAgent.contains('ipad') ||
+                              userAgent.contains('android');
+                          if (isMobile) {
+                            html.window.location.href =
+                                'instagram://story-camera';
+                          } else {
+                            html.window
+                                .open('https://www.instagram.com', '_blank');
+                          }
                         }
                         Navigator.of(context).pop();
                       },
