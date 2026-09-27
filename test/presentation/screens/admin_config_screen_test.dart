@@ -397,65 +397,21 @@ void main() {
       expect(find.text('¿Eliminar todas las credenciales?'), findsNothing);
     });
 
-    testWidgets('displays Gemini API key card and saves customApiKey',
+    testWidgets('renders core admin sections without custom API key field',
         (tester) async {
       tester.view.physicalSize = const Size(1280, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      when(() => mockSaveUseCase.execute(any())).thenAnswer((_) async {});
-
-      final configWithKey = EventConfig.defaultQuito().copyWith(
-        customApiKey: 'AIzaSyInitialKey123',
-      );
-
-      await tester.pumpWidget(createTestWidget(initialConfig: configWithKey));
+      await tester.pumpWidget(createTestWidget());
       await unlockScreen(tester);
 
-      expect(find.text('Configuración de Gemini AI API Key'), findsOneWidget);
-      expect(find.textContaining('aistudio.google.com'), findsOneWidget);
-
-      final keyField = find.widgetWithText(TextField, 'AIzaSyInitialKey123');
-      expect(keyField, findsOneWidget);
-
-      // Verify toggle obscure
-      final apiKeyCard = find.ancestor(
-        of: find.text('Configuración de Gemini AI API Key'),
-        matching: find.byType(Card),
-      );
-      final visibilityBtn = find.descendant(
-        of: apiKeyCard,
-        matching: find.byIcon(Icons.visibility_outlined),
-      );
-      expect(visibilityBtn, findsOneWidget);
-      await tester.tap(visibilityBtn);
-      await tester.pumpAndSettle();
-      expect(
-        find.descendant(
-          of: apiKeyCard,
-          matching: find.byIcon(Icons.visibility_off_outlined),
-        ),
-        findsOneWidget,
-      );
-
-      // Enter a new key
-      await tester.enterText(keyField, 'AIzaSyNewCustomKey999');
-      await tester.pumpAndSettle();
-
-      // Tap Save
-      await tester.scrollUntilVisible(
-        find.text('Guardar Configuración en Vivo'),
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.tap(find.text('Guardar Configuración en Vivo'));
-      await tester.pumpAndSettle();
-
-      final captured =
-          verify(() => mockSaveUseCase.execute(captureAny())).captured;
-      final savedConfig = captured.first as EventConfig;
-      expect(savedConfig.customApiKey, equals('AIzaSyNewCustomKey999'));
+      expect(find.text('Configuración de Gemini AI API Key'), findsNothing);
+      expect(find.text('Información General del Evento'), findsOneWidget);
+      expect(find.text('Logotipo y Mascota del Evento'), findsOneWidget);
+      expect(find.text('Gestión del Álbum Comunitario'), findsOneWidget);
+      expect(find.text('Plantilla del Prompt Multimodal (IA)'), findsOneWidget);
     });
 
     testWidgets(

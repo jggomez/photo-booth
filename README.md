@@ -72,10 +72,10 @@ EventBooth transforms traditional event check-ins and photo booths into an unfor
   - One-click reset to generic conference defaults.
 - **Built-in Presets**: Switch instantly between presets (Quito 2026, Cancún 2026, and Generic Event) with automatic preservation of custom administrator credentials.
 
-### 🤖 Gemini AI Multimodal Integration
-- Powered by Google's **Gemini 3.1 Flash Image** via Firebase Vertex AI and Google AI Studio REST APIs.
-- **Custom Gemini API Key**: Event organizers can paste their own free Gemini API key from [Google AI Studio](https://aistudio.google.com) directly in the Admin Panel without changing code or rebuilding.
-- **Customizable Prompt Templates**: Adjust the multimodal prompt with dynamic tags (`{name}`, `{eventName}`, `{location}`, `{hashtag}`) and regional phrases catalog.
+### 🤖 Gemini AI Multimodal Integration (Firebase AI Logic)
+- Powered by Google's **Gemini 3.1 Flash Image** via **Firebase Vertex AI (Firebase AI Logic)**.
+- **Zero API Key Friction**: Connects natively to your Firebase project's Vertex AI instance using the official `firebase_ai` SDK and authenticated REST endpoints. No manual API keys required in the Admin Panel!
+- **Customizable Prompt Templates**: Adjust the multimodal prompt with dynamic tags (`{name}`, `{eventName}`, `{location}`, `{hashtag}`) and regional phrases catalog directly in the Admin Panel.
 
 ### 📊 Community Album & Data Management
 - **One-Click CSV Export**: Export all registered attendees (`Nombre,Email,Evento,Fecha`) to a `.csv` file formatted with UTF-8 BOM (`﻿`) for perfect compatibility with Microsoft Excel and Google Sheets.
@@ -91,52 +91,108 @@ EventBooth transforms traditional event check-ins and photo booths into an unfor
 
 ---
 
-## 🚀 Quickstart Guide
+## 🚀 Speaker & Organizer Setup Guide (Self-Hosting)
 
-### Prerequisites
+> [!IMPORTANT]
+> The demo backend is dedicated to showcase events. **If you are a tech speaker, community organizer, or GDG lead**, you should deploy your own isolated Firebase backend for your event. Follow this step-by-step guide to be live in under 5 minutes:
+
+### 📋 Prerequisites
 - [Flutter SDK](https://flutter.dev/docs/get-started/install) (version 3.24 or higher)
-- [Git](https://git-scm.com)
-- Modern Web Browser (Google Chrome, Safari, Firefox, Edge)
+- [Firebase CLI](https://firebase.google.com/docs/cli) (`npm install -g firebase-tools`)
+- [Google Cloud SDK / gcloud CLI](https://cloud.google.com/sdk/docs/install)
+- A Google / Firebase Account
 
-### 1. Clone & Run Locally
+---
+
+### 🛠️ Step 1: Create a Firebase Project & Upgrade to Blaze
+1. Open the [Firebase Console](https://console.firebase.google.com) and click **"Add project"** (e.g., `eventbooth-myconf-2026`).
+2. Upgrade your project to the **Blaze Plan (Pay as you go)**.
+   > **💡 Cost Note:** Google provides generous free tiers for Vertex AI and Gemini. For a conference of 300+ attendees, total AI badge generation costs are typically under **$0.50 USD**.
+
+---
+
+### 🔌 Step 2: Enable Required Firebase & Google Cloud Services
+In your Firebase Console, activate the following 4 services from the left sidebar (*Build* menu):
+
+1. **Cloud Firestore**:
+   - Go to **Build > Firestore Database** -> Click **"Create database"**.
+   - Select your preferred region and start in *Production* (or *Test*) mode. *(The repository includes complete production security rules in `firestore.rules`)*.
+2. **Cloud Storage**:
+   - Go to **Build > Storage** -> Click **"Get started"**.
+   - Provisions your storage bucket (`gs://<your-project-id>.firebasestorage.app`) for badge graphics.
+3. **Vertex AI in Firebase (Firebase AI Logic)**:
+   - Go to **Build > Vertex AI in Firebase** (or **AI Logic**) -> Click **"Get started"**.
+   - Follow the prompt to enable the `firebasevertexai.googleapis.com` API for `gemini-3.1-flash-image`.
+   - *Alternatively, enable it via terminal with gcloud:*
+     ```bash
+     gcloud services enable firebasevertexai.googleapis.com --project=<YOUR_PROJECT_ID>
+     ```
+4. **Firebase Hosting**:
+   - Go to **Build > Hosting** -> Click **"Get started"**.
+
+---
+
+### 🌐 Step 3: Configure CORS on Cloud Storage (Critical for Web)
+To enable web browsers to render, manipulate, and download user badges without being blocked by browser CORS policy, apply the included [`cors.json`](cors.json) to your storage bucket:
+
 ```bash
-# Clone the repository
+gcloud storage buckets update gs://<YOUR_PROJECT_ID>.firebasestorage.app --cors-file=cors.json
+```
+
+---
+
+### 💻 Step 4: Clone & Configure Your Flutter App
+```bash
+# 1. Clone the repository
 git clone https://github.com/jggomez/photo-booth.git
 cd photo-booth
 
-# Give execution permissions and launch
-chmod +x run-locally.sh
-./run-locally.sh
-```
-
-Or run directly with Flutter:
-```bash
+# 2. Get dependencies
 flutter pub get
-flutter run -d chrome --web-port 8080
+
+# 3. Authenticate with Firebase
+firebase login
+
+# 4. Configure FlutterFire to link your Firebase project
+flutterfire configure --project=<YOUR_PROJECT_ID> --platforms=web
 ```
-Open [http://localhost:8080](http://localhost:8080) in your browser.
+*(This automatically writes your project credentials into `lib/firebase_options.dart` and `.firebaserc`)*.
 
 ---
 
-### 2. Access the Secret Admin Panel
-1. Navigate to [http://localhost:8080/#/admin](http://localhost:8080/#/admin) or tap the ⚙️ gear icon in the top header.
-2. Enter the default administrator PIN: **`2026`**.
-3. Configure your event details, upload your logo, paste your Gemini API key, and hit **"Guardar Configuración en Vivo" / "Save Live Configuration"**.
-4. Changes take effect across all connected devices in real time via Cloud Firestore!
-
----
-
-### 3. Deploy to Firebase Hosting
-
-You can deploy EventBooth to your own Firebase project in two commands:
+### 🚀 Step 5: Build & Deploy to Firebase Hosting
+Deploy your web application along with the bundled security rules and storage configuration:
 
 ```bash
-# 1. Build optimized production web bundle
+# 1. Build the production Web bundle
 flutter build web --release
 
-# 2. Deploy hosting and security rules
+# 2. Deploy Web hosting, Firestore rules, and Storage rules
 firebase deploy --only hosting,firestore:rules,storage
 ```
+
+Once deployment completes, Firebase CLI will output your live URL:
+```text
+✔ Hosting URL: https://<YOUR_PROJECT_ID>.web.app
+```
+
+---
+
+### ⚙️ Step 6: Brand Your Event in the Secret Admin Panel
+1. Navigate to: **`https://<YOUR_PROJECT_ID>.web.app/#/admin`**
+2. Enter the default administrator PIN: **`2026`**.
+3. **Customize your event**:
+   - Set **Event Name**, **Tagline**, **Location**, and **Official Hashtag**.
+   - Upload your event's **Official Logo** and **Photobooth Hero Mascot** (or choose one of the built-in Presets: Quito, Cancún, or Generic).
+   - Tailor the multimodal AI prompt template if desired.
+   - **Update the Admin PIN**: Set your own private PIN (minimum 4 characters) to secure your dashboard.
+4. Click **"Guardar Configuración en Vivo" / "Save Live Configuration"**.
+
+---
+
+### 🎉 Step 7: Ready for Your Attendees!
+- Display your web URL or print a QR code on your conference slides.
+- Attendees scan the QR code from their mobile phones, generate custom AI badges, view the live community photo wall, and participate in the F1 Grand Prix prize roulette!
 
 ---
 

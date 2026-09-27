@@ -42,9 +42,7 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
   late final TextEditingController _socialCaptionController;
   late final TextEditingController _logoUrlController;
   late final TextEditingController _heroUrlController;
-  late final TextEditingController _apiKeyController;
 
-  bool _obscureApiKey = true;
   bool _obscureAdminPin = true;
   bool _obscurePinInput = true;
   bool _isUnlocked = false;
@@ -53,9 +51,6 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
   String? _pinError;
   bool _isSaving = false;
   bool _isUploadingAsset = false;
-  bool _isTestingApiKey = false;
-  String? _apiKeyTestMessage;
-  bool? _apiKeyTestSuccess;
 
   List<String> _fallbackTitles = [];
 
@@ -82,7 +77,6 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
     _socialCaptionController = TextEditingController();
     _logoUrlController = TextEditingController();
     _heroUrlController = TextEditingController();
-    _apiKeyController = TextEditingController();
   }
 
   void _populateFromConfig(EventConfig config) {
@@ -100,7 +94,6 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
     _socialCaptionController.text = config.socialShareCaptionTemplate;
     _logoUrlController.text = config.logoUrl ?? '';
     _heroUrlController.text = config.heroImageUrl ?? '';
-    _apiKeyController.text = config.customApiKey ?? '';
     _fallbackTitles = List<String>.from(config.fallbackTitles);
   }
 
@@ -122,7 +115,6 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
     _socialCaptionController.dispose();
     _logoUrlController.dispose();
     _heroUrlController.dispose();
-    _apiKeyController.dispose();
     super.dispose();
   }
 
@@ -173,7 +165,6 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
     final current = ref.read(eventConfigNotifierProvider).config;
     final logoText = _logoUrlController.text.trim();
     final heroText = _heroUrlController.text.trim();
-    final apiKeyText = _apiKeyController.text.trim();
 
     return current.copyWith(
       eventName: _nameController.text.trim(),
@@ -193,8 +184,6 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
       clearLogoUrl: logoText.isEmpty,
       heroImageUrl: heroText.isEmpty ? null : heroText,
       clearHeroImageUrl: heroText.isEmpty,
-      customApiKey: apiKeyText.isEmpty ? null : apiKeyText,
-      clearCustomApiKey: apiKeyText.isEmpty,
       updatedAt: DateTime.now(),
     );
   }
@@ -569,8 +558,6 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
               const SizedBox(height: 24),
               _buildGeneralInfoSection(strings, isNarrow: false),
               const SizedBox(height: 24),
-              _buildGeminiApiKeySection(strings),
-              const SizedBox(height: 24),
               _buildAssetsSection(strings, isNarrow: false),
               const SizedBox(height: 24),
               _buildAlbumManagementSection(),
@@ -611,8 +598,6 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
         const SizedBox(height: 24),
         _buildGeneralInfoSection(strings, isNarrow: true),
         const SizedBox(height: 24),
-        _buildGeminiApiKeySection(strings),
-        const SizedBox(height: 24),
         _buildAssetsSection(strings, isNarrow: true),
         const SizedBox(height: 24),
         _buildAlbumManagementSection(),
@@ -623,169 +608,6 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
         const SizedBox(height: 32),
         _buildSaveButton(strings),
       ],
-    );
-  }
-
-  Future<void> _handleTestApiKey(AppStrings strings) async {
-    final key = _apiKeyController.text.trim();
-    if (key.isEmpty) {
-      setState(() {
-        _apiKeyTestSuccess = false;
-        _apiKeyTestMessage = strings.apiKeyHint;
-      });
-      return;
-    }
-    setState(() {
-      _isTestingApiKey = true;
-      _apiKeyTestMessage = null;
-      _apiKeyTestSuccess = null;
-    });
-    final useCase = ref.read(testGeminiApiKeyUseCaseProvider);
-    final result = await useCase.execute(key);
-    if (mounted) {
-      setState(() {
-        _isTestingApiKey = false;
-        _apiKeyTestSuccess = result.success;
-        _apiKeyTestMessage = result.success
-            ? strings.apiKeySuccess
-            : '${strings.apiKeyInvalid}${result.message}';
-      });
-    }
-  }
-
-  Widget _buildGeminiApiKeySection(AppStrings strings) {
-    return Card(
-      color: AppColors.surfaceDark,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.key_rounded,
-                    color: AppColors.sunshineAmber, size: 22),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    strings.apiKeyTitle,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              strings.apiKeyHelp,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _apiKeyController,
-              obscureText: _obscureApiKey,
-              decoration: InputDecoration(
-                labelText: 'Gemini API Key',
-                hintText: strings.apiKeyHint,
-                prefixIcon: const Icon(Icons.vpn_key_outlined, size: 20),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscureApiKey
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    size: 20,
-                  ),
-                  tooltip: _obscureApiKey ? 'Mostrar' : 'Ocultar',
-                  onPressed: () {
-                    setState(() {
-                      _obscureApiKey = !_obscureApiKey;
-                    });
-                  },
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: AppColors.surfaceCard,
-              ),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: _isTestingApiKey ? null : () => _handleTestApiKey(strings),
-                  icon: _isTestingApiKey
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.network_check, size: 18),
-                  label: Text(
-                    _isTestingApiKey
-                        ? strings.testingApiKey
-                        : strings.testApiKeyButton,
-                  ),
-                ),
-              ],
-            ),
-            if (_apiKeyTestMessage != null) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: (_apiKeyTestSuccess ?? false)
-                      ? AppColors.success.withValues(alpha: 0.15)
-                      : AppColors.error.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: (_apiKeyTestSuccess ?? false)
-                        ? AppColors.success.withValues(alpha: 0.4)
-                        : AppColors.error.withValues(alpha: 0.4),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      (_apiKeyTestSuccess ?? false)
-                          ? Icons.check_circle_outline
-                          : Icons.error_outline,
-                      color: (_apiKeyTestSuccess ?? false)
-                          ? AppColors.success
-                          : AppColors.error,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _apiKeyTestMessage!,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: (_apiKeyTestSuccess ?? false)
-                              ? AppColors.success
-                              : AppColors.error,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
     );
   }
 
