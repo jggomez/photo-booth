@@ -55,6 +55,9 @@ EventBooth transforms traditional event check-ins and photo booths into an unfor
 
 ---
 
+### 5. Secret Admin Configuration Room
+*PIN-protected control room to configure branding, custom logos, hero mascots, Gemini AI prompt templates, custom API keys, instant presets, attendee CSV exports, and community album maintenance.*
+
 ![Admin Configuration Dashboard](screenshots/5.png)
 
 ---
@@ -67,7 +70,7 @@ EventBooth transforms traditional event check-ins and photo booths into an unfor
   - Live 70x70 preview boxes with loading indicators and error fallbacks.
   - Paste any public image URL (HTTPS, CDN, Drive, Imgur) or upload files directly to Cloud Storage.
   - One-click reset to generic conference defaults.
-- **Built-in Presets**: Switch instantly between presets
+- **Built-in Presets**: Switch instantly between presets (Quito 2026, Cancún 2026, and Generic Event) with automatic preservation of custom administrator credentials.
 
 ### 🤖 Gemini AI Multimodal Integration
 - Powered by Google's **Gemini 3.1 Flash Image** via Firebase Vertex AI and Google AI Studio REST APIs.
@@ -99,7 +102,7 @@ EventBooth transforms traditional event check-ins and photo booths into an unfor
 ```bash
 # Clone the repository
 git clone https://github.com/jggomez/photo-booth.git
-cd event-booth
+cd photo-booth
 
 # Give execution permissions and launch
 chmod +x run-locally.sh
