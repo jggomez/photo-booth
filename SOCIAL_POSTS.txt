@@ -1,0 +1,60 @@
+================================================================================
+EVENTBOOTH - PLANTILLAS DE DIFUSIÓN / SOCIAL MEDIA POSTS
+================================================================================
+
+Este archivo contiene los textos listos para copiar y pegar para compartir 
+EventBooth en LinkedIn y WhatsApp (grupos de desarrolladores, comunidades y speakers).
+
+--------------------------------------------------------------------------------
+1. PUBLICACIÓN PARA LINKEDIN (Formato profesional, técnico y orientado a comunidad)
+--------------------------------------------------------------------------------
+
+🚀 ¿Cansado de las dinámicas aburridas en conferencias tech? Creé EventBooth, una solución Open Source para llevar la interacción de tus charlas al siguiente nivel con Inteligencia Artificial.
+
+EventBooth es una Web App interactiva diseñada para speakers y organizadores que convierte a cada asistente en protagonista de tu charla en tiempo real, sin requerir hardware costoso ni descargas de apps.
+
+¿Cómo funciona para la audiencia?
+Los asistentes escanean un código QR desde sus teléfonos y acceden a:
+
+📸 Photobooth con IA Multimodal: Se toman una selfie y Firebase Vertex AI (Gemini) la transforma en una credencial oficial con avatar temático y un título personalizado con IA.
+🖼️ Muro Comunitario en Vivo: Galería en tiempo real proyectable en la pantalla principal para ver las fotos y credenciales de toda la sala conforme se van sumando.
+🏎️ Ruleta de Premios F1 Grand Prix: Sorteo gamificado con telemetría de carrera y podio (P1, P2, P3) entre todos los que crearon su credencial.
+⚙️ Panel de Control en Vivo (/admin): Cambia logos, mascota, nombre del evento, hashtag y descarga la lista de asistentes en CSV en segundos.
+
+💡 Lo mejor: 
+• 100% Flutter Web + Firebase (Clean Architecture, soporte multi-idioma ES/EN).
+• Costo real ridículamente bajo: Menos de $3.50 USD para 100 asistentes (frente a los $800+ de una cabina física tradicional).
+
+Código 100% Open Source y guía de despliegue paso a paso en GitHub:
+👉 https://github.com/jggomez/photo-booth
+
+Pruébalo en vivo aquí:
+👉 https://event-booth-2026.web.app
+
+¿Qué opinan? ¿Lo usarían en su próximo evento o meetup? Los leo en los comentarios 👇
+
+#Flutter #Firebase #VertexAI #Gemini #OpenSource #DevRel #Community #TechEvents
+
+
+--------------------------------------------------------------------------------
+2. MENSAJE PARA WHATSAPP / TELEGRAM (Directo, ágil y con emojis)
+--------------------------------------------------------------------------------
+
+👋 ¡Hola a todos! Les comparto un proyecto Open Source que acabo de publicar para dinamizar charlas y meetups: *EventBooth* 🚀
+
+Es una web app para que la audiencia interactúe desde el celular escaneando un QR:
+
+🎯 *¿Qué incluye?*
+1️⃣ *Photobooth con IA*: El asistente se toma una selfie y Gemini (Firebase Vertex AI) genera su credencial oficial con avatar temático.
+2️⃣ *Muro de Fotos en Vivo*: Se proyecta en la pantalla del auditorio para ver a todos en tiempo real.
+3️⃣ *Ruleta F1 para Sorteos*: Animación estilo Fórmula 1 con podio (1º, 2º y 3º lugar) para rifar premios o swags entre los asistentes.
+4️⃣ *Panel Admin Secreto*: Personaliza logo, nombre del evento y exporta los participantes a CSV.
+
+💰 *Costo*: Corre en Flutter Web + Firebase y cuesta menos de *$3.50 USD para 100 asistentes* (o $0 con los créditos gratis de Google Cloud).
+
+🔗 *Demo en vivo*: https://event-booth-2026.web.app
+📦 *Repo en GitHub con guía de despliegue*: https://github.com/jggomez/photo-booth
+
+¡Si dan charlas o lideran comunidades, los invito a probarlo y darme su feedback! 🙌
+
+================================================================================
