@@ -7,8 +7,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-event--booth--2026.web.app-success?logo=firebase)](https://event-booth-2026.web.app)
 
-> 🌐 **Live Demo:** [https://event-booth-2026.web.app](https://event-booth-2026.web.app)  
-> ⚙️ **Admin Control Room:** [https://event-booth-2026.web.app/#/admin](https://event-booth-2026.web.app/#/admin) *(Default PIN: `2026` or click the ⚙️ gear icon in the top header)*
+> 🌐 **Live Demo:** [https://event-booth-2026.web.app](https://event-booth-2026.web.app)
 
 ---
 

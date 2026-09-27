@@ -13,9 +13,8 @@ typedef GeminiMultimodalGenerator
   required Uint8List photoBytes,
 });
 
-/// Remote data source that interacts with Gemini models via:
-/// 1. Google AI Studio Developer REST API (when [customApiKey] is provided) using Imagen 3 and Gemini 2.0 Flash.
-/// 2. Firebase AI SDK / Firebase Vertex AI REST endpoint as fallback.
+/// Remote data source that interacts exclusively with 
+/// through Firebase AI () and direct Firebase Vertex AI REST endpoint.
 class AiBadgeRemoteDataSource {
   final FirebaseAI? _firebaseAi;
   final GeminiMultimodalGenerator? _geminiMultimodalGenerator;
@@ -50,19 +49,24 @@ class AiBadgeRemoteDataSource {
         _apiKey = apiKey,
         _projectId = projectId;
 
-  /// Tests connectivity and validity of a Gemini API key against Google AI Studio.
+  /// Tests connectivity and validity of a Gemini API key using .
   Future<({bool success, String message})> testApiKey(String apiKey) async {
     final key = apiKey.trim();
     if (key.isEmpty) {
       return (success: false, message: 'La API Key está vacía.');
     }
     try {
+      final projectId = _projectId ?? DefaultFirebaseOptions.web.projectId;
+      final appId = DefaultFirebaseOptions.web.appId;
       final uri = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$key',
+        'https://firebasevertexai.googleapis.com/v1beta/projects/$projectId/models/gemini-3.1-flash-image:generateContent?key=$key',
       );
       final res = await _httpClient.post(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Firebase-AppId': appId,
+        },
         body: jsonEncode({
           'contents': [
             {
@@ -77,7 +81,7 @@ class AiBadgeRemoteDataSource {
       if (res.statusCode == 200) {
         return (
           success: true,
-          message: '¡Conexión exitosa con Google AI Studio (Gemini 2.0 Flash)!'
+          message: '¡Conexión exitosa con Firebase AI (gemini-3.1-flash-image)!'
         );
       } else {
         String detail = 'Código HTTP ${res.statusCode}';
@@ -88,7 +92,7 @@ class AiBadgeRemoteDataSource {
         return (success: false, message: 'Validación fallida: $detail');
       }
     } catch (e) {
-      return (success: false, message: 'Error de conexión con Gemini: $e');
+      return (success: false, message: 'Error de conexión con Firebase AI: $e');
     }
   }
 
@@ -110,7 +114,7 @@ class AiBadgeRemoteDataSource {
   static String getFallbackTitle(String attendeeName) =>
       resolveFallbackTitle(attendeeName);
 
-  /// Generates badge with AI portrait and vibe title.
+  /// Invokes  to produce an illustrated portrait and short vibe title.
   Future<AiBadgeResult> generateBadge({
     required Uint8List photoBytes,
     required String attendeeName,
@@ -143,68 +147,52 @@ class AiBadgeRemoteDataSource {
 
         aiVibeTitle = result.vibeTitle;
         generatedImageBytes = result.imageBytes;
-      } else if (customApiKey != null && customApiKey.trim().isNotEmpty) {
-        // Primary path when customApiKey is set: Google AI Developer API
-        final googleResult = await _generateViaGoogleAiStudio(
-          apiKey: customApiKey.trim(),
-          promptText: promptText,
-          photoBytes: photoBytes,
-        );
-        aiVibeTitle = googleResult.vibeTitle;
-        generatedImageBytes = googleResult.imageBytes;
-
-        // Fallback to Vertex AI if Google AI Studio returned nothing
-        if (aiVibeTitle == null && generatedImageBytes == null) {
-          final directResult = await _generateViaFirebaseVertexAiApi(
-            promptText: promptText,
-            photoBytes: photoBytes,
-            customApiKey: customApiKey,
-          );
-          aiVibeTitle = directResult.vibeTitle;
-          generatedImageBytes = directResult.imageBytes;
-        }
       } else {
         bool sdkSucceeded = false;
-        try {
-          final firebaseAi = _firebaseAi ?? FirebaseAI.googleAI();
-          final model = firebaseAi.generativeModel(
-            model: 'gemini-3.1-flash-image',
-            generationConfig: GenerationConfig(
-              responseModalities: [
-                ResponseModalities.text,
-                ResponseModalities.image,
-              ],
-            ),
-          );
+        // Channel 1: Firebase AI SDK if no custom key overrides it
+        if (customApiKey == null || customApiKey.trim().isEmpty) {
+          try {
+            final firebaseAi = _firebaseAi ?? FirebaseAI.googleAI();
+            final model = firebaseAi.generativeModel(
+              model: 'gemini-3.1-flash-image',
+              generationConfig: GenerationConfig(
+                responseModalities: [
+                  ResponseModalities.text,
+                  ResponseModalities.image,
+                ],
+              ),
+            );
 
-          final prompt = [
-            Content.multi([
-              TextPart(promptText),
-              InlineDataPart('image/jpeg', photoBytes),
-            ]),
-          ];
+            final prompt = [
+              Content.multi([
+                TextPart(promptText),
+                InlineDataPart('image/jpeg', photoBytes),
+              ]),
+            ];
 
-          final response = await model
-              .generateContent(prompt)
-              .timeout(const Duration(seconds: 20));
+            final response = await model
+                .generateContent(prompt)
+                .timeout(const Duration(seconds: 20));
 
-          final parts = response.candidates.firstOrNull?.content.parts ?? [];
-          for (final part in parts) {
-            if (part is TextPart) {
-              aiVibeTitle ??= part.text;
+            final parts = response.candidates.firstOrNull?.content.parts ?? [];
+            for (final part in parts) {
+              if (part is TextPart) {
+                aiVibeTitle ??= part.text;
+              }
+              if (part is InlineDataPart) {
+                generatedImageBytes ??= part.bytes;
+              }
             }
-            if (part is InlineDataPart) {
-              generatedImageBytes ??= part.bytes;
-            }
-          }
 
-          if (aiVibeTitle != null || generatedImageBytes != null) {
-            sdkSucceeded = true;
+            if (aiVibeTitle != null || generatedImageBytes != null) {
+              sdkSucceeded = true;
+            }
+          } catch (_) {
+            sdkSucceeded = false;
           }
-        } catch (_) {
-          sdkSucceeded = false;
         }
 
+        // Channel 2: Direct REST call to Firebase Vertex AI endpoint
         if (!sdkSucceeded) {
           final directResult = await _generateViaFirebaseVertexAiApi(
             promptText: promptText,
@@ -216,7 +204,7 @@ class AiBadgeRemoteDataSource {
         }
       }
     } catch (_) {
-      // Gracefully catch timeout / offline
+      // Gracefully catch timeout / offline issues
     }
 
     final isAiSuccess =
@@ -237,105 +225,6 @@ class AiBadgeRemoteDataSource {
     );
   }
 
-  /// Generates AI portrait via Imagen 3 and creative vibe title via Gemini 2.0 Flash on Google AI Studio.
-  Future<({String? vibeTitle, Uint8List? imageBytes})>
-      _generateViaGoogleAiStudio({
-    required String apiKey,
-    required String promptText,
-    required Uint8List photoBytes,
-  }) async {
-    String? vibeTitle;
-    Uint8List? imageBytes;
-
-    // 1. Imagen 3 image generation
-    try {
-      final imagenUri = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=$apiKey',
-      );
-      final imagenBody = jsonEncode({
-        'instances': [
-          {'prompt': promptText}
-        ],
-        'parameters': {
-          'sampleCount': 1,
-          'aspectRatio': '1:1',
-          'outputMimeType': 'image/jpeg',
-        }
-      });
-      final imagenRes = await _httpClient
-          .post(
-            imagenUri,
-            headers: {'Content-Type': 'application/json'},
-            body: imagenBody,
-          )
-          .timeout(const Duration(seconds: 25));
-
-      if (imagenRes.statusCode == 200) {
-        final data = jsonDecode(imagenRes.body) as Map<String, dynamic>;
-        final predictions = data['predictions'] as List<dynamic>?;
-        final first = predictions?.firstOrNull as Map<String, dynamic>?;
-        final b64 = first?['bytesBase64Encoded'] as String?;
-        if (b64 != null && b64.isNotEmpty) {
-          imageBytes = base64Decode(b64);
-        }
-      }
-    } catch (_) {}
-
-    // 2. Multimodal text vibe with Gemini 2.0 Flash
-    try {
-      final geminiUri = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$apiKey',
-      );
-      final geminiBody = jsonEncode({
-        'contents': [
-          {
-            'parts': [
-              {'text': promptText},
-              {
-                'inlineData': {
-                  'mimeType': 'image/jpeg',
-                  'data': base64Encode(photoBytes),
-                }
-              }
-            ]
-          }
-        ]
-      });
-      final geminiRes = await _httpClient
-          .post(
-            geminiUri,
-            headers: {'Content-Type': 'application/json'},
-            body: geminiBody,
-          )
-          .timeout(const Duration(seconds: 20));
-
-      if (geminiRes.statusCode == 200) {
-        final data = jsonDecode(geminiRes.body) as Map<String, dynamic>;
-        final candidates = data['candidates'] as List<dynamic>?;
-        final firstCandidate = candidates?.firstOrNull as Map<String, dynamic>?;
-        final content = firstCandidate?['content'] as Map<String, dynamic>?;
-        final parts = content?['parts'] as List<dynamic>? ?? [];
-
-        for (final item in parts) {
-          if (item is Map<String, dynamic>) {
-            if (item.containsKey('text')) {
-              vibeTitle ??= item['text'] as String?;
-            }
-            if (imageBytes == null && item.containsKey('inlineData')) {
-              final inline = item['inlineData'] as Map<String, dynamic>?;
-              final b64 = inline?['data'] as String?;
-              if (b64 != null && b64.isNotEmpty) {
-                imageBytes = base64Decode(b64);
-              }
-            }
-          }
-        }
-      }
-    } catch (_) {}
-
-    return (vibeTitle: vibeTitle, imageBytes: imageBytes);
-  }
-
   Future<({String? vibeTitle, Uint8List? imageBytes})>
       _generateViaFirebaseVertexAiApi({
     required String promptText,
@@ -347,6 +236,7 @@ class AiBadgeRemoteDataSource {
           ? customApiKey
           : (_apiKey ?? DefaultFirebaseOptions.web.apiKey);
       final projectId = _projectId ?? DefaultFirebaseOptions.web.projectId;
+      final appId = DefaultFirebaseOptions.web.appId;
       final uri = Uri.parse(
         'https://firebasevertexai.googleapis.com/v1beta/projects/$projectId/models/gemini-3.1-flash-image:generateContent?key=$key',
       );
@@ -373,10 +263,13 @@ class AiBadgeRemoteDataSource {
       final res = await _httpClient
           .post(
             uri,
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Firebase-AppId': appId,
+            },
             body: jsonEncode(payload),
           )
-          .timeout(const Duration(seconds: 20));
+          .timeout(const Duration(seconds: 25));
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body) as Map<String, dynamic>;

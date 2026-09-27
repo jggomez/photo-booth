@@ -268,10 +268,10 @@ class AppStrings {
     savedSuccess: 'Configuración guardada en vivo exitosamente',
     testApiKeyButton: 'Probar Conexión',
     testingApiKey: 'Probando conexión con Gemini...',
-    apiKeySuccess: '¡API Key conectada con éxito a Gemini AI!',
+    apiKeySuccess: '¡Conexión exitosa con Firebase AI (gemini-3.1-flash-image)!',
     apiKeyInvalid: 'Error al validar API Key: ',
     aiGeneratedSuccess: '✨ ¡Retrato y Vibe generados con Inteligencia Artificial!',
-    aiFallbackTip: '📸 Credencial creada con tu foto. (Tip: Puedes configurar tu API Key de Gemini en /admin para habilitar retratos con IA generativa).',
+    aiFallbackTip: '📸 Credencial creada con tu foto. (Tip: Puedes verificar tu configuración de Firebase AI en /admin).',
   );
 
   static const _enStrings = AppStrings(
@@ -341,7 +341,7 @@ class AppStrings {
     apiKeyTitle: 'Gemini AI API Key Configuration',
     apiKeyHint: 'Paste your Gemini API Key (AIzaSy...)',
     apiKeyHelp:
-        'Optional. Obtain a free Gemini API Key from Google AI Studio (aistudio.google.com) to use your own generation quota.',
+        'API Key configuration for Firebase AI with gemini-3.1-flash-image. If left blank, the app uses the default Firebase configuration.',
     assetsTitle: 'Event Logo and Mascot',
     logoLabel: 'Official Logo',
     mascotLabel: 'Hero Photobooth Mascot',
@@ -363,9 +363,9 @@ class AppStrings {
     savedSuccess: 'Configuration saved live successfully',
     testApiKeyButton: 'Test Connection',
     testingApiKey: 'Testing connection to Gemini...',
-    apiKeySuccess: 'API Key successfully connected to Gemini AI!',
+    apiKeySuccess: 'Successfully connected to Firebase AI (gemini-3.1-flash-image)!',
     apiKeyInvalid: 'API Key validation failed: ',
     aiGeneratedSuccess: '✨ Portrait and Vibe successfully generated with AI!',
-    aiFallbackTip: '📸 Badge created with your photo. (Tip: You can set your Gemini API Key in /admin to enable generative AI portraits).',
+    aiFallbackTip: '📸 Badge created with your photo. (Tip: You can verify your Firebase AI settings in /admin).',
   );
 }

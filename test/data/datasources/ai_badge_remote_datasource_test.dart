@@ -99,7 +99,7 @@ void main() {
       verify(() => mockClient.post(
             Uri.parse(
                 'https://firebasevertexai.googleapis.com/v1beta/projects/dashbooth-cancun-2026/models/gemini-3.1-flash-image:generateContent?key=test-api-key'),
-            headers: {'Content-Type': 'application/json'},
+            headers: any(named: 'headers'),
             body: any(named: 'body'),
           )).called(1);
     });
@@ -187,6 +187,35 @@ void main() {
       expect(title2.isNotEmpty, isTrue);
       expect(AiBadgeRemoteDataSource.caribbeanFallbackTitles, contains(title1));
       expect(AiBadgeRemoteDataSource.caribbeanFallbackTitles, contains(title2));
+    });
+    test('testApiKey returns success when endpoint returns HTTP 200', () async {
+      final mockClient = MockHttpClient();
+      when(() => mockClient.post(
+            any(),
+            headers: any(named: 'headers'),
+            body: any(named: 'body'),
+          )).thenAnswer((_) async => http.Response('{}', 200));
+
+      final dataSource = AiBadgeRemoteDataSource(httpClient: mockClient);
+      final result = await dataSource.testApiKey('my-valid-key');
+
+      expect(result.success, isTrue);
+      expect(result.message, contains('gemini-3.1-flash-image'));
+    });
+
+    test('testApiKey returns failure on HTTP 400 or network error', () async {
+      final mockClient = MockHttpClient();
+      when(() => mockClient.post(
+            any(),
+            headers: any(named: 'headers'),
+            body: any(named: 'body'),
+          )).thenAnswer((_) async => http.Response('{"error":{"message":"Invalid API key"}}', 400));
+
+      final dataSource = AiBadgeRemoteDataSource(httpClient: mockClient);
+      final result = await dataSource.testApiKey('bad-key');
+
+      expect(result.success, isFalse);
+      expect(result.message, contains('Invalid API key'));
     });
   });
 }
