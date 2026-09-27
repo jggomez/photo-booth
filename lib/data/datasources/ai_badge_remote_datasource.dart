@@ -148,9 +148,18 @@ class AiBadgeRemoteDataSource {
         aiVibeTitle = result.vibeTitle;
         generatedImageBytes = result.imageBytes;
       } else {
-        bool sdkSucceeded = false;
-        // Channel 1: Firebase AI SDK if no custom key overrides it
-        if (customApiKey == null || customApiKey.trim().isEmpty) {
+        // Primary Channel: Direct REST call to Firebase Vertex AI API:
+        // https://firebasevertexai.googleapis.com/v1beta/projects/<projectId>/models/gemini-3.1-flash-image:generateContent
+        final directResult = await _generateViaFirebaseVertexAiApi(
+          promptText: promptText,
+          photoBytes: photoBytes,
+          customApiKey: customApiKey,
+        );
+        aiVibeTitle = directResult.vibeTitle;
+        generatedImageBytes = directResult.imageBytes;
+
+        // Fallback Channel: Firebase AI SDK if direct REST call returned empty
+        if (aiVibeTitle == null && generatedImageBytes == null) {
           try {
             final firebaseAi = _firebaseAi ?? FirebaseAI.googleAI();
             final model = firebaseAi.generativeModel(
@@ -183,24 +192,7 @@ class AiBadgeRemoteDataSource {
                 generatedImageBytes ??= part.bytes;
               }
             }
-
-            if (aiVibeTitle != null || generatedImageBytes != null) {
-              sdkSucceeded = true;
-            }
-          } catch (_) {
-            sdkSucceeded = false;
-          }
-        }
-
-        // Channel 2: Direct REST call to Firebase Vertex AI endpoint
-        if (!sdkSucceeded) {
-          final directResult = await _generateViaFirebaseVertexAiApi(
-            promptText: promptText,
-            photoBytes: photoBytes,
-            customApiKey: customApiKey,
-          );
-          aiVibeTitle = directResult.vibeTitle;
-          generatedImageBytes = directResult.imageBytes;
+          } catch (_) {}
         }
       }
     } catch (_) {

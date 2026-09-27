@@ -55,9 +55,6 @@ EventBooth transforms traditional event check-ins and photo booths into an unfor
 
 ---
 
-### 5. Secret Admin Dashboard (`/admin`)
-*Comprehensive control room: live logo & mascot preview with direct URL editing, custom Gemini API key configuration, attendee CSV export, and album management.*
-
 ![Admin Configuration Dashboard](screenshots/5.png)
 
 ---
@@ -70,7 +67,7 @@ EventBooth transforms traditional event check-ins and photo booths into an unfor
   - Live 70x70 preview boxes with loading indicators and error fallbacks.
   - Paste any public image URL (HTTPS, CDN, Drive, Imgur) or upload files directly to Cloud Storage.
   - One-click reset to generic conference defaults.
-- **Built-in Presets**: Switch instantly between presets (e.g. *DevFest Quito 2026*, *Cancún 2026*, *Generic Tech Event*).
+- **Built-in Presets**: Switch instantly between presets
 
 ### 🤖 Gemini AI Multimodal Integration
 - Powered by Google's **Gemini 3.1 Flash Image** via Firebase Vertex AI and Google AI Studio REST APIs.
