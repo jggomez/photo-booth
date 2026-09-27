@@ -2,12 +2,9 @@
   "firestore": {
     "rules": "firestore.rules"
   },
-  "storage": [
-    {
-      "bucket": "dashbooth-cancun-2026-user-cards",
-      "rules": "storage.rules"
-    }
-  ],
+  "storage": {
+    "rules": "storage.rules"
+  },
   "hosting": {
     "public": "build/web",
     "ignore": [

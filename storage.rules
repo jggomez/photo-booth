@@ -1,12 +1,16 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // Lectura y subida pública de imágenes de credenciales
     match /user_cards/{cardId} {
-      // Lectura pública de las credenciales generadas para el collage en vivo y visualización web
       allow read: if true;
+      allow write: if request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
 
-      // Creación/Subida pública de la imagen de credencial (Zero-Auth)
-      // Se valida que sea formato de imagen y peso máximo de 5MB
+    // Lectura y subida de assets del evento (logos, banners)
+    match /event_assets/{assetId} {
+      allow read: if true;
       allow write: if request.resource.size < 5 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }

@@ -1,11 +1,11 @@
 {
-    "name": "Cancun DashBooth — FlutterConf LATAM 2026",
-    "short_name": "DashBooth",
+    "name": "EventBooth — Photobooth Inteligente para Eventos",
+    "short_name": "EventBooth",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#080E1E",
     "theme_color": "#00E5FF",
-    "description": "Cancun DashBooth — Captura tu selfie con Dash IA y genera tu credencial oficial para FlutterConf LATAM Cancún 2026.",
+    "description": "EventBooth — Captura tu foto con IA y genera tu credencial oficial para cualquier evento.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

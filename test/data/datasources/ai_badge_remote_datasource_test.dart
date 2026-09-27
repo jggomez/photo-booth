@@ -46,9 +46,9 @@ void main() {
           result.aiVibeTitle, 'Dash Surfista Legendario | Vibra Caribeña 100%');
       // The image returned MUST be the IA generated image directly
       expect(result.imageBytes, equals(aiGeneratedImageBytes));
-      expect(capturedPrompt, contains('FlutterConf LATAM Cancún 2026'));
+      expect(capturedPrompt, contains('DevFest Quito 2026'));
       expect(capturedPrompt, contains('Valeria'));
-      expect(capturedPrompt, contains('Dash'));
+      expect(capturedPrompt, contains('mascot'));
       expect(capturedPhoto, equals(testPhotoBytes));
     });
 
@@ -152,6 +152,30 @@ void main() {
       expect(result.aiVibeTitle,
           'Explorador Maya de Flutter | Vibra Tropical 99%');
       expect(result.imageBytes, equals(testPhotoBytes));
+    });
+
+    test('uses custom promptTemplate and fallbackTitles when provided',
+        () async {
+      String? capturedPrompt;
+      final customFallbacks = ['Quito Dev 100%', 'Pichincha 99%'];
+
+      final dataSource = AiBadgeRemoteDataSource(
+        geminiMultimodalGenerator: (
+            {required prompt, required photoBytes}) async {
+          capturedPrompt = prompt;
+          return (vibeTitle: null, imageBytes: null);
+        },
+      );
+
+      final result = await dataSource.generateBadge(
+        photoBytes: testPhotoBytes,
+        attendeeName: 'Mateo',
+        promptTemplate: 'Attendee {name} in Quito Andes',
+        fallbackTitles: customFallbacks,
+      );
+
+      expect(capturedPrompt, equals('Attendee Mateo in Quito Andes'));
+      expect(customFallbacks, contains(result.aiVibeTitle));
     });
 
     test('getFallbackTitle returns consistent non-empty title for any name',

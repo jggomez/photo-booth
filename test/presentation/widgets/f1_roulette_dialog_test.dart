@@ -50,7 +50,7 @@ void main() {
       await tester.pumpWidget(buildTestWidget(sampleCards));
       await tester.pump();
 
-      expect(find.text('GRAN PREMIO CANCÚN 2026'), findsOneWidget);
+      expect(find.text('GRAN PREMIO DEVFEST QUITO 2026'), findsOneWidget);
       expect(find.textContaining('Ruleta Oficial de Premios'), findsOneWidget);
       expect(find.byIcon(Icons.timer_outlined), findsOneWidget);
       expect(find.byIcon(Icons.speed), findsOneWidget);
@@ -69,7 +69,7 @@ void main() {
       }
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('PODIO DEL GRAN PREMIO FLUTTERCONF'),
+      expect(find.textContaining('PODIO DEL GRAN PREMIO DEVFEST QUITO 2026'),
           findsOneWidget);
       expect(find.text('P1'), findsOneWidget);
       expect(find.text('P2'), findsOneWidget);
@@ -85,6 +85,28 @@ void main() {
       await tester.pump();
 
       expect(find.byIcon(Icons.timer_outlined), findsOneWidget);
+    });
+
+    testWidgets('uses custom eventTitle for podium banner', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: F1RouletteDialog(
+            cards: sampleCards,
+            eventTitle: 'Conferencia Tech 2026',
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      for (int i = 0; i < 110; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('PODIO DEL GRAN PREMIO CONFERENCIA TECH 2026'),
+        findsOneWidget,
+      );
     });
   });
 }

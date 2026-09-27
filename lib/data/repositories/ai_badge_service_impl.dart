@@ -14,10 +14,21 @@ class AiBadgeServiceImpl implements IAiBadgeService {
   Future<AiBadgeResult> generateDashBadge({
     required Uint8List photoBytes,
     required String attendeeName,
+    String? promptTemplate,
+    List<String>? fallbackTitles,
+    String? customApiKey,
   }) async {
     return await _dataSource.generateBadge(
       photoBytes: photoBytes,
       attendeeName: attendeeName,
+      promptTemplate: promptTemplate,
+      fallbackTitles: fallbackTitles,
+      customApiKey: customApiKey,
     );
+  }
+
+  @override
+  Future<({bool success, String message})> testApiKey(String apiKey) async {
+    return await _dataSource.testApiKey(apiKey);
   }
 }

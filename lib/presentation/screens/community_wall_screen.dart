@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
+import '../../domain/entities/event_config.dart';
 import '../../domain/entities/user_card.dart';
+import '../providers/app_language_provider.dart';
 import '../providers/community_wall_provider.dart';
+import '../providers/event_config_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/badge_detail_modal.dart';
 import '../widgets/community_badge_item.dart';
@@ -16,25 +19,40 @@ class CommunityWallScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final wallAsync = ref.watch(communityWallProvider);
+    final config = ref.watch(currentEventConfigProvider);
+    final lang = ref.watch(appLanguageProvider);
+    final isEn = lang == AppLanguage.en;
 
     return wallAsync.when(
-      data: (cards) => _buildWallContent(context, cards),
+      data: (cards) => _buildWallContent(context, cards, config, isEn),
       loading: () => _buildLoadingShimmer(),
-      error: (error, stack) => _buildErrorState(context, error, ref),
+      error: (error, stack) => _buildErrorState(context, error, ref, isEn),
     );
   }
 
-  void _openF1Roulette(BuildContext context, List<UserCard> cards) {
+  void _openF1Roulette(
+    BuildContext context,
+    List<UserCard> cards, [
+    EventConfig? config,
+  ]) {
     showDialog(
       context: context,
       barrierDismissible: true,
-      builder: (context) => F1RouletteDialog(cards: cards),
+      builder: (context) => F1RouletteDialog(
+        cards: cards,
+        eventTitle: config?.eventName,
+      ),
     );
   }
 
-  Widget _buildWallContent(BuildContext context, List<UserCard> cards) {
+  Widget _buildWallContent(
+    BuildContext context,
+    List<UserCard> cards,
+    EventConfig config,
+    bool isEn,
+  ) {
     if (cards.isEmpty) {
-      return _buildEmptyState(context);
+      return _buildEmptyState(context, config, isEn);
     }
 
     return Stack(
@@ -53,7 +71,7 @@ class CommunityWallScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // Header Summary Banner (Always Horizontal & Sleek)
-                      _buildHeaderBanner(context, cards),
+                      _buildHeaderBanner(context, cards, config, isEn),
                       const SizedBox(height: 28),
 
                       // Disorganized / Scattered Polaroid Album Grid
@@ -73,8 +91,9 @@ class CommunityWallScreen extends ConsumerWidget {
                           return CommunityBadgeItem(
                             card: card,
                             index: index,
+                            communityTagline: config.communityTagline,
                             onTap: () =>
-                                BadgeDetailModal.show(context, card),
+                                BadgeDetailModal.show(context, card, config),
                           );
                         },
                       ),
@@ -92,13 +111,13 @@ class CommunityWallScreen extends ConsumerWidget {
           right: 24,
           child: FloatingActionButton.extended(
             heroTag: 'f1_roulette_fab',
-            onPressed: () => _openF1Roulette(context, cards),
+            onPressed: () => _openF1Roulette(context, cards, config),
             backgroundColor: const Color(0xFFE10600),
             elevation: 8,
             icon: const Text('🏎️', style: TextStyle(fontSize: 20)),
-            label: const Text(
-              'Ruleta F1 Premios',
-              style: TextStyle(
+            label: Text(
+              isEn ? 'F1 Prize Roulette' : 'Ruleta F1 Premios',
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w900,
                 fontSize: 14,
@@ -115,7 +134,12 @@ class CommunityWallScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeaderBanner(BuildContext context, List<UserCard> cards) {
+  Widget _buildHeaderBanner(
+    BuildContext context,
+    List<UserCard> cards,
+    EventConfig config,
+    bool isEn,
+  ) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isNarrow = constraints.maxWidth < 520;
@@ -160,8 +184,10 @@ class CommunityWallScreen extends ConsumerWidget {
                         children: [
                           Text(
                             isNarrow
-                                ? 'Álbum en Vivo 📸'
-                                : 'Álbum de Recuerdos en Vivo 📸',
+                                ? (isEn ? 'Live Album 📸' : 'Álbum en Vivo 📸')
+                                : (isEn
+                                    ? 'Live Memory Album 📸'
+                                    : 'Álbum de Recuerdos en Vivo 📸'),
                             style: TextStyle(
                               fontSize: isNarrow ? 15 : 17,
                               fontWeight: FontWeight.bold,
@@ -173,8 +199,12 @@ class CommunityWallScreen extends ConsumerWidget {
                           const SizedBox(height: 2),
                           Text(
                             isNarrow
-                                ? '${cards.length} Fotos de Pioneers'
-                                : '${cards.length} Fotos de Flutter Pioneers en Cancún 2026',
+                                ? (isEn
+                                    ? '${cards.length} Photos of ${config.badgeRoleTitle}s'
+                                    : '${cards.length} Fotos de ${config.badgeRoleTitle}s')
+                                : (isEn
+                                    ? '${cards.length} Photos of ${config.badgeRoleTitle}s at ${config.eventName}'
+                                    : '${cards.length} Fotos de ${config.badgeRoleTitle}s en ${config.eventName}'),
                             style: TextStyle(
                               fontSize: isNarrow ? 11.5 : 12.5,
                               color: AppColors.dashCyan,
@@ -190,7 +220,13 @@ class CommunityWallScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              _buildRouletteCtaButton(context, cards, isCompact: isNarrow),
+              _buildRouletteCtaButton(
+                context,
+                cards,
+                config: config,
+                isCompact: isNarrow,
+                isEn: isEn,
+              ),
             ],
           ),
         );
@@ -201,14 +237,18 @@ class CommunityWallScreen extends ConsumerWidget {
   Widget _buildRouletteCtaButton(
     BuildContext context,
     List<UserCard> cards, {
+    EventConfig? config,
     bool fullWidth = false,
     bool isCompact = false,
+    bool isEn = false,
   }) {
     final buttonChild = ElevatedButton.icon(
-      onPressed: () => _openF1Roulette(context, cards),
+      onPressed: () => _openF1Roulette(context, cards, config),
       icon: const Text('🏎️', style: TextStyle(fontSize: 16)),
       label: Text(
-        isCompact ? 'Ruleta F1' : 'Ruleta F1 Premios',
+        isCompact
+            ? (isEn ? 'F1 Roulette' : 'Ruleta F1')
+            : (isEn ? 'F1 Prize Roulette' : 'Ruleta F1 Premios'),
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w900,
@@ -244,7 +284,11 @@ class CommunityWallScreen extends ConsumerWidget {
     return buttonChild;
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState(
+    BuildContext context, [
+    EventConfig? config,
+    bool isEn = false,
+  ]) {
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -275,26 +319,34 @@ class CommunityWallScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Text(
-                  '¡El Mural está esperando!',
+                Text(
+                  isEn ? 'The Wall is waiting!' : '¡El Mural está esperando!',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Sé el primer asistente en tomarte una foto con Dash y publicar tu credencial oficial.',
+                Text(
+                  isEn
+                      ? 'Be the first attendee to snap a photo with Dash and publish your official badge.'
+                      : 'Sé el primer asistente en tomarte una foto con Dash y publicar tu credencial oficial.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 28),
-                _buildRouletteCtaButton(context, const [], fullWidth: true),
+                _buildRouletteCtaButton(
+                  context,
+                  const [],
+                  config: config,
+                  fullWidth: true,
+                  isEn: isEn,
+                ),
               ],
             ),
           ),
@@ -337,7 +389,12 @@ class CommunityWallScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildErrorState(BuildContext context, Object error, WidgetRef ref) {
+  Widget _buildErrorState(
+    BuildContext context,
+    Object error,
+    WidgetRef ref, [
+    bool isEn = false,
+  ]) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -351,9 +408,11 @@ class CommunityWallScreen extends ConsumerWidget {
               children: [
                 const Icon(Icons.cloud_off, size: 48, color: AppColors.error),
                 const SizedBox(height: 16),
-                const Text(
-                  'No pudimos conectar con el mural en vivo',
-                  style: TextStyle(
+                Text(
+                  isEn
+                      ? 'Could not connect to the live mural'
+                      : 'No pudimos conectar con el mural en vivo',
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
@@ -372,7 +431,8 @@ class CommunityWallScreen extends ConsumerWidget {
                 ElevatedButton.icon(
                   onPressed: () => ref.invalidate(communityWallProvider),
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Reintentar conexión'),
+                  label:
+                      Text(isEn ? 'Retry connection' : 'Reintentar conexión'),
                 ),
               ],
             ),

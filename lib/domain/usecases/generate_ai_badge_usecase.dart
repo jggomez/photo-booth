@@ -11,6 +11,9 @@ class GenerateAiBadgeUseCase {
   Future<AiBadgeResult> execute({
     required Uint8List photoBytes,
     required String attendeeName,
+    String? promptTemplate,
+    List<String>? fallbackTitles,
+    String? customApiKey,
   }) async {
     final trimmedName = attendeeName.trim();
     if (trimmedName.length < 2) {
@@ -23,6 +26,9 @@ class GenerateAiBadgeUseCase {
     return await _aiService.generateDashBadge(
       photoBytes: photoBytes,
       attendeeName: trimmedName,
+      promptTemplate: promptTemplate,
+      fallbackTitles: fallbackTitles,
+      customApiKey: customApiKey,
     );
   }
 }

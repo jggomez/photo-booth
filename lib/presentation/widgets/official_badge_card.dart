@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_gradients.dart';
 
-/// The official printable / downloadable conference badge for FlutterConf LATAM Cancún 2026.
-/// Features a holographic Caribbean design, VIP NFC chip simulation,
+import '../../domain/entities/event_config.dart';
+
+/// The official printable / downloadable conference badge for events.
+/// Features a holographic design, VIP NFC chip simulation,
 /// conference logo, and high-definition rasterization via [RepaintBoundary].
 class OfficialBadgeCard extends StatelessWidget {
   final GlobalKey repaintBoundaryKey;
@@ -14,6 +16,7 @@ class OfficialBadgeCard extends StatelessWidget {
   final String? badgeImageUrl;
   final String? aiVibeTitle;
   final double width;
+  final EventConfig? config;
 
   const OfficialBadgeCard({
     super.key,
@@ -24,10 +27,12 @@ class OfficialBadgeCard extends StatelessWidget {
     this.badgeImageUrl,
     this.aiVibeTitle,
     this.width = 340,
+    this.config,
   });
 
   @override
   Widget build(BuildContext context) {
+    final cfg = config ?? EventConfig.defaultQuito();
     return RepaintBoundary(
       key: repaintBoundaryKey,
       child: Container(
@@ -67,10 +72,10 @@ class OfficialBadgeCard extends StatelessWidget {
             _buildLanyardTop(),
 
             // Official Header with Custom Logo
-            _buildHeaderBanner(),
+            _buildHeaderBanner(cfg),
 
             // Attendee Avatar Frame with Holographic Glow
-            _buildAvatarSection(),
+            _buildAvatarSection(cfg),
 
             const SizedBox(height: 8),
 
@@ -83,7 +88,7 @@ class OfficialBadgeCard extends StatelessWidget {
             _buildSecurityChipAndBarcode(),
 
             // Tech Footer
-            _buildFooter(),
+            _buildFooter(cfg),
           ],
         ),
       ),
@@ -115,7 +120,78 @@ class OfficialBadgeCard extends StatelessWidget {
     );
   }
 
-  Widget _buildHeaderBanner() {
+  Widget _buildLogo(EventConfig cfg) {
+    final logo = cfg.logoUrl?.trim();
+    if (logo == null || logo.isEmpty) {
+      return Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF4285F4), Color(0xFF34A853)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 6,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(4),
+        child: const Icon(
+          Icons.terminal_rounded,
+          color: Colors.white,
+          size: 28,
+        ),
+      );
+    }
+
+    final isNetwork = logo.startsWith('http://') || logo.startsWith('https://');
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(4),
+      child: isNetwork
+          ? Image.network(
+              logo,
+              fit: BoxFit.contain,
+              semanticLabel: 'Logo oficial de ${cfg.eventName}',
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.flutter_dash,
+                color: AppColors.flutterBlue,
+                size: 28,
+              ),
+            )
+          : Image.asset(
+              logo,
+              fit: BoxFit.contain,
+              semanticLabel: 'Logo oficial de ${cfg.eventName}',
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.flutter_dash,
+                color: AppColors.flutterBlue,
+                size: 28,
+              ),
+            ),
+    );
+  }
+
+  Widget _buildHeaderBanner(EventConfig cfg) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
@@ -131,60 +207,34 @@ class OfficialBadgeCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Logo from images/logo.png
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 6,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.all(4),
-            child: Image.asset(
-              'images/logo.png',
-              fit: BoxFit.contain,
-              semanticLabel: 'Logo oficial de FlutterConf LATAM 2026',
-              errorBuilder: (context, error, stackTrace) => const Icon(
-                Icons.flutter_dash,
-                color: AppColors.flutterBlue,
-                size: 28,
-              ),
-            ),
-          ),
+          _buildLogo(cfg),
           const SizedBox(width: 12),
           // Conference Title & Location
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'FLUTTERCONF LATAM 2026',
-                  style: TextStyle(
+                  cfg.eventName.toUpperCase(),
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.6,
                     color: Colors.white,
                   ),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Row(
                   children: [
-                    Icon(Icons.location_on,
+                    const Icon(Icons.location_on,
                         size: 11, color: AppColors.sunshineAmber),
-                    SizedBox(width: 3),
+                    const SizedBox(width: 3),
                     Flexible(
                       child: Text(
-                        'Cancún, México • All-Access Pass',
+                        cfg.eventTagline,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w500,
                           color: Colors.white,
@@ -218,7 +268,7 @@ class OfficialBadgeCard extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatarSection() {
+  Widget _buildAvatarSection(EventConfig cfg) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Stack(
@@ -245,7 +295,7 @@ class OfficialBadgeCard extends StatelessWidget {
                 ],
               ),
               clipBehavior: Clip.antiAlias,
-              child: _buildBadgeImage(),
+              child: _buildBadgeImage(cfg),
             ),
           ),
 
@@ -266,14 +316,14 @@ class OfficialBadgeCard extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.star, size: 14, color: AppColors.bgDark),
-                  SizedBox(width: 5),
+                  const Icon(Icons.star, size: 14, color: AppColors.bgDark),
+                  const SizedBox(width: 5),
                   Text(
-                    'FLUTTER PIONEER',
-                    style: TextStyle(
+                    cfg.badgeRoleTitle,
+                    style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.0,
@@ -310,7 +360,7 @@ class OfficialBadgeCard extends StatelessWidget {
           const SizedBox(height: 3),
           Text(
             attendeeEmail.trim().isEmpty
-                ? 'asistente@flutterconf.latam'
+                ? 'asistente@evento.com'
                 : attendeeEmail,
             textAlign: TextAlign.center,
             maxLines: 1,
@@ -467,7 +517,7 @@ class OfficialBadgeCard extends StatelessWidget {
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooter(EventConfig cfg) {
     return Container(
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -482,9 +532,9 @@ class OfficialBadgeCard extends StatelessWidget {
               color: AppColors.dashCyan.withValues(alpha: 0.4),
             ),
           ),
-          child: const Text(
-            '#flutterconflatam26',
-            style: TextStyle(
+          child: Text(
+            cfg.hashtag,
+            style: const TextStyle(
               fontFamily: 'monospace',
               fontSize: 10.5,
               fontWeight: FontWeight.bold,
@@ -497,24 +547,24 @@ class OfficialBadgeCard extends StatelessWidget {
     );
   }
 
-  Widget _buildBadgeImage() {
+  Widget _buildBadgeImage(EventConfig cfg) {
     if (badgeImageBytes != null && badgeImageBytes!.isNotEmpty) {
       return Image.memory(
         badgeImageBytes!,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => _fallbackPlaceholder(),
+        errorBuilder: (context, error, stackTrace) => _fallbackPlaceholder(cfg),
       );
     } else if (badgeImageUrl != null && badgeImageUrl!.isNotEmpty) {
       return Image.network(
         badgeImageUrl!,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => _fallbackPlaceholder(),
+        errorBuilder: (context, error, stackTrace) => _fallbackPlaceholder(cfg),
       );
     }
-    return _fallbackPlaceholder();
+    return _fallbackPlaceholder(cfg);
   }
 
-  Widget _fallbackPlaceholder() {
+  Widget _fallbackPlaceholder(EventConfig cfg) {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -533,12 +583,18 @@ class OfficialBadgeCard extends StatelessWidget {
               color: Colors.white,
             ),
             const SizedBox(height: 8),
-            Text(
-              'Dash Cancun Vibe',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.white.withValues(alpha: 0.8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                cfg.eventName,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white.withValues(alpha: 0.8),
+                ),
               ),
             ),
           ],

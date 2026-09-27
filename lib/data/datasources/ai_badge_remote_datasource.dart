@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:http/http.dart' as http;
 import '../../domain/entities/ai_badge_result.dart';
+import '../../domain/entities/event_config.dart';
 import '../../firebase_options.dart';
 
 typedef GeminiMultimodalGenerator
@@ -12,9 +13,9 @@ typedef GeminiMultimodalGenerator
   required Uint8List photoBytes,
 });
 
-/// Remote data source that interacts with `gemini-3.1-flash-image` with multimodal input and output
-/// through Firebase Vertex AI (`https://firebasevertexai.googleapis.com/v1beta/projects/<projectId>/models/...`).
-/// If the Firebase AI SDK client throws an exception, it falls back to the direct Firebase Vertex AI REST endpoint.
+/// Remote data source that interacts with Gemini models via:
+/// 1. Google AI Studio Developer REST API (when [customApiKey] is provided) using Imagen 3 and Gemini 2.0 Flash.
+/// 2. Firebase AI SDK / Firebase Vertex AI REST endpoint as fallback.
 class AiBadgeRemoteDataSource {
   final FirebaseAI? _firebaseAi;
   final GeminiMultimodalGenerator? _geminiMultimodalGenerator;
@@ -49,32 +50,85 @@ class AiBadgeRemoteDataSource {
         _apiKey = apiKey,
         _projectId = projectId;
 
-  /// Returns a deterministic Caribbean title from the fallback catalog for [attendeeName].
-  static String getFallbackTitle(String attendeeName) {
-    final cleanName = attendeeName.trim();
-    if (cleanName.isEmpty) {
-      return caribbeanFallbackTitles.first;
+  /// Tests connectivity and validity of a Gemini API key against Google AI Studio.
+  Future<({bool success, String message})> testApiKey(String apiKey) async {
+    final key = apiKey.trim();
+    if (key.isEmpty) {
+      return (success: false, message: 'La API Key está vacía.');
     }
-    final index = cleanName.hashCode.abs() % caribbeanFallbackTitles.length;
-    return caribbeanFallbackTitles[index];
+    try {
+      final uri = Uri.parse(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$key',
+      );
+      final res = await _httpClient.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'contents': [
+            {
+              'parts': [
+                {'text': 'Ping'}
+              ]
+            }
+          ]
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      if (res.statusCode == 200) {
+        return (
+          success: true,
+          message: '¡Conexión exitosa con Google AI Studio (Gemini 2.0 Flash)!'
+        );
+      } else {
+        String detail = 'Código HTTP ${res.statusCode}';
+        try {
+          final data = jsonDecode(res.body) as Map<String, dynamic>;
+          detail = data['error']?['message'] ?? detail;
+        } catch (_) {}
+        return (success: false, message: 'Validación fallida: $detail');
+      }
+    } catch (e) {
+      return (success: false, message: 'Error de conexión con Gemini: $e');
+    }
   }
 
-  /// Invokes `gemini-3.1-flash-image` to produce an illustrated Caribbean portrait and short vibe title.
+  /// Returns a deterministic fallback title for [attendeeName].
+  static String resolveFallbackTitle(String attendeeName,
+      [List<String>? titles]) {
+    final list = (titles != null && titles.isNotEmpty)
+        ? titles
+        : caribbeanFallbackTitles;
+    final cleanName = attendeeName.trim();
+    if (cleanName.isEmpty) {
+      return list.first;
+    }
+    final index = cleanName.hashCode.abs() % list.length;
+    return list[index];
+  }
+
+  /// Backward compatible helper returning Caribbean catalog title.
+  static String getFallbackTitle(String attendeeName) =>
+      resolveFallbackTitle(attendeeName);
+
+  /// Generates badge with AI portrait and vibe title.
   Future<AiBadgeResult> generateBadge({
     required Uint8List photoBytes,
     required String attendeeName,
+    String? promptTemplate,
+    List<String>? fallbackTitles,
+    String? customApiKey,
   }) async {
-    final promptText =
-        'A vibrant, high-quality digital art portrait of the conference attendee ($attendeeName) '
-        'from the reference photo celebrating at FlutterConf LATAM Cancún 2026. '
-        'Standing happily right next to the attendee is Dash, the official Flutter mascot. '
-        'CRITICAL MASCOT DETAILS: Dash is a cute, round, chubby, fluffy blue plush bird toy (NOT a dolphin, NOT a fish, NOT an aquatic animal). '
-        'Dash has a plump round body covered in soft cyan and royal-blue felt feathers with a cream-white belly patch, '
-        'large friendly round cartoon eyes, a tiny short triangular orange beak, two small rounded blue bird wings, and two tiny orange bird feet standing on the sand. '
-        'Setting: picturesque tropical Cancun beach in Quintana Roo, Mexico, with turquoise Caribbean ocean in the background, fine white sand of the Riviera Maya, swaying green palm trees under bright warm sunlight, with subtle colorful Mexican festival touches. '
-        'Style: polished conference badge illustration, sharp focus, rich colors, joyful and festive atmosphere. '
-        'CRITICAL REQUIREMENT FOR THE TEXT VIBE: You MUST provide a short, punchy 3 to 5 word conference vibe or title in Spanish that ALWAYS includes authentic Mexican phrases and regional expressions from Cancún, Quintana Roo, and Yucatán (such as "¡Qué Chido!", "Bomba Yucateca", "Vibra Maya", "¡Qué Padre!", "A Toda Madre", "Cenote", "Kukulcán", "Mayab", "Marquesita", etc.). '
-        'Examples of expected output: "¡Qué Chido Cancún! 100%", "Bomba Yucateca de Código", "Vibra Maya 100% Chida", "¡Qué Padre la Riviera!", "Kukulcán del Hot Reload", "Cenote Sagrado 99%". Do not include quotes, markdown, or conversational filler.';
+    final String promptText;
+    if (promptTemplate != null && promptTemplate.trim().isNotEmpty) {
+      promptText = promptTemplate.replaceAll('{name}', attendeeName);
+    } else {
+      promptText = EventConfig.defaultQuito()
+          .promptTemplate
+          .replaceAll('{name}', attendeeName)
+          .replaceAll('{eventName}', 'DevFest Quito 2026')
+          .replaceAll('{location}', 'Quito, Ecuador')
+          .replaceAll('{hashtag}', '#devfestquito26');
+    }
 
     String? aiVibeTitle;
     Uint8List? generatedImageBytes;
@@ -89,6 +143,26 @@ class AiBadgeRemoteDataSource {
 
         aiVibeTitle = result.vibeTitle;
         generatedImageBytes = result.imageBytes;
+      } else if (customApiKey != null && customApiKey.trim().isNotEmpty) {
+        // Primary path when customApiKey is set: Google AI Developer API
+        final googleResult = await _generateViaGoogleAiStudio(
+          apiKey: customApiKey.trim(),
+          promptText: promptText,
+          photoBytes: photoBytes,
+        );
+        aiVibeTitle = googleResult.vibeTitle;
+        generatedImageBytes = googleResult.imageBytes;
+
+        // Fallback to Vertex AI if Google AI Studio returned nothing
+        if (aiVibeTitle == null && generatedImageBytes == null) {
+          final directResult = await _generateViaFirebaseVertexAiApi(
+            promptText: promptText,
+            photoBytes: photoBytes,
+            customApiKey: customApiKey,
+          );
+          aiVibeTitle = directResult.vibeTitle;
+          generatedImageBytes = directResult.imageBytes;
+        }
       } else {
         bool sdkSucceeded = false;
         try {
@@ -131,22 +205,26 @@ class AiBadgeRemoteDataSource {
           sdkSucceeded = false;
         }
 
-        // If Firebase AI SDK fails, fallback directly to Firebase Vertex AI REST API
-        // at https://firebasevertexai.googleapis.com/v1beta/projects/<projectId>/models/...
         if (!sdkSucceeded) {
           final directResult = await _generateViaFirebaseVertexAiApi(
             promptText: promptText,
             photoBytes: photoBytes,
+            customApiKey: customApiKey,
           );
           aiVibeTitle = directResult.vibeTitle;
           generatedImageBytes = directResult.imageBytes;
         }
       }
     } catch (_) {
-      // Gracefully catch timeout / offline / conference Wi-Fi issues
+      // Gracefully catch timeout / offline
     }
 
-    final cleanVibe = _sanitizeVibeTitle(aiVibeTitle, attendeeName);
+    final isAiSuccess =
+        (aiVibeTitle != null && aiVibeTitle.isNotEmpty) ||
+        (generatedImageBytes != null && generatedImageBytes.isNotEmpty);
+
+    final cleanVibe =
+        _sanitizeVibeTitle(aiVibeTitle, attendeeName, fallbackTitles);
     final finalImageBytes =
         (generatedImageBytes != null && generatedImageBytes.isNotEmpty)
             ? generatedImageBytes
@@ -155,16 +233,119 @@ class AiBadgeRemoteDataSource {
     return AiBadgeResult(
       imageBytes: finalImageBytes,
       aiVibeTitle: cleanVibe,
+      isAiTransformed: isAiSuccess,
     );
+  }
+
+  /// Generates AI portrait via Imagen 3 and creative vibe title via Gemini 2.0 Flash on Google AI Studio.
+  Future<({String? vibeTitle, Uint8List? imageBytes})>
+      _generateViaGoogleAiStudio({
+    required String apiKey,
+    required String promptText,
+    required Uint8List photoBytes,
+  }) async {
+    String? vibeTitle;
+    Uint8List? imageBytes;
+
+    // 1. Imagen 3 image generation
+    try {
+      final imagenUri = Uri.parse(
+        'https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=$apiKey',
+      );
+      final imagenBody = jsonEncode({
+        'instances': [
+          {'prompt': promptText}
+        ],
+        'parameters': {
+          'sampleCount': 1,
+          'aspectRatio': '1:1',
+          'outputMimeType': 'image/jpeg',
+        }
+      });
+      final imagenRes = await _httpClient
+          .post(
+            imagenUri,
+            headers: {'Content-Type': 'application/json'},
+            body: imagenBody,
+          )
+          .timeout(const Duration(seconds: 25));
+
+      if (imagenRes.statusCode == 200) {
+        final data = jsonDecode(imagenRes.body) as Map<String, dynamic>;
+        final predictions = data['predictions'] as List<dynamic>?;
+        final first = predictions?.firstOrNull as Map<String, dynamic>?;
+        final b64 = first?['bytesBase64Encoded'] as String?;
+        if (b64 != null && b64.isNotEmpty) {
+          imageBytes = base64Decode(b64);
+        }
+      }
+    } catch (_) {}
+
+    // 2. Multimodal text vibe with Gemini 2.0 Flash
+    try {
+      final geminiUri = Uri.parse(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$apiKey',
+      );
+      final geminiBody = jsonEncode({
+        'contents': [
+          {
+            'parts': [
+              {'text': promptText},
+              {
+                'inlineData': {
+                  'mimeType': 'image/jpeg',
+                  'data': base64Encode(photoBytes),
+                }
+              }
+            ]
+          }
+        ]
+      });
+      final geminiRes = await _httpClient
+          .post(
+            geminiUri,
+            headers: {'Content-Type': 'application/json'},
+            body: geminiBody,
+          )
+          .timeout(const Duration(seconds: 20));
+
+      if (geminiRes.statusCode == 200) {
+        final data = jsonDecode(geminiRes.body) as Map<String, dynamic>;
+        final candidates = data['candidates'] as List<dynamic>?;
+        final firstCandidate = candidates?.firstOrNull as Map<String, dynamic>?;
+        final content = firstCandidate?['content'] as Map<String, dynamic>?;
+        final parts = content?['parts'] as List<dynamic>? ?? [];
+
+        for (final item in parts) {
+          if (item is Map<String, dynamic>) {
+            if (item.containsKey('text')) {
+              vibeTitle ??= item['text'] as String?;
+            }
+            if (imageBytes == null && item.containsKey('inlineData')) {
+              final inline = item['inlineData'] as Map<String, dynamic>?;
+              final b64 = inline?['data'] as String?;
+              if (b64 != null && b64.isNotEmpty) {
+                imageBytes = base64Decode(b64);
+              }
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    return (vibeTitle: vibeTitle, imageBytes: imageBytes);
   }
 
   Future<({String? vibeTitle, Uint8List? imageBytes})>
       _generateViaFirebaseVertexAiApi({
     required String promptText,
     required Uint8List photoBytes,
+    String? customApiKey,
   }) async {
     try {
-      final key = _apiKey ?? DefaultFirebaseOptions.web.apiKey;
+      final key = (customApiKey != null && customApiKey.isNotEmpty)
+          ? customApiKey
+          : (_apiKey ?? DefaultFirebaseOptions.web.apiKey);
       final projectId = _projectId ?? DefaultFirebaseOptions.web.projectId;
       final uri = Uri.parse(
         'https://firebasevertexai.googleapis.com/v1beta/projects/$projectId/models/gemini-3.1-flash-image:generateContent?key=$key',
@@ -229,17 +410,21 @@ class AiBadgeRemoteDataSource {
     return (vibeTitle: null, imageBytes: null);
   }
 
-  String _sanitizeVibeTitle(String? rawTitle, String attendeeName) {
+  String _sanitizeVibeTitle(
+    String? rawTitle,
+    String attendeeName, [
+    List<String>? customFallbacks,
+  ]) {
     if (rawTitle == null) {
-      return getFallbackTitle(attendeeName);
+      return resolveFallbackTitle(attendeeName, customFallbacks);
     }
     final trimmed = rawTitle
-        .replaceAll('\r', ' ')
-        .replaceAll('\n', ' ')
-        .replaceAll('"', '')
+        .replaceAll(String.fromCharCode(13), ' ')
+        .replaceAll(String.fromCharCode(10), ' ')
+        .replaceAll('"', ' ')
         .trim();
     if (trimmed.isEmpty || trimmed.length < 3) {
-      return getFallbackTitle(attendeeName);
+      return resolveFallbackTitle(attendeeName, customFallbacks);
     }
     return trimmed;
   }

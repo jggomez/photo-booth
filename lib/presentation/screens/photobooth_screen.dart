@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/badge_draft.dart';
+import '../../domain/entities/event_config.dart';
+import '../localization/app_strings.dart';
+import '../providers/app_language_provider.dart';
 import '../providers/badge_draft_provider.dart';
 import '../providers/ai_generation_provider.dart';
 import '../providers/card_publish_provider.dart';
+import '../providers/event_config_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_gradients.dart';
 import '../utils/social_share_service.dart';
@@ -55,14 +59,41 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
     );
     if (result != null) {
       ref.read(badgeDraftProvider.notifier).setAiVibeTitle(result.aiVibeTitle);
+      if (mounted) {
+        final lang = ref.read(appLanguageProvider);
+        final strings = AppStrings.get(lang);
+        final message = result.isAiTransformed
+            ? strings.aiGeneratedSuccess
+            : strings.aiFallbackTip;
+        final color = result.isAiTransformed
+            ? AppColors.success
+            : AppColors.surfaceCard;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: color,
+            duration: Duration(seconds: result.isAiTransformed ? 4 : 6),
+          ),
+        );
+      }
     }
   }
 
   Future<void> _handleDownloadBadge() async {
     final draft = ref.read(badgeDraftProvider);
-    final safeName = draft.attendeeName.trim().replaceAll(' ', '_');
+    final config = ref.read(currentEventConfigProvider);
+    final safeEvent = config.eventName
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'\s+'), '_')
+        .replaceAll(RegExp(r'[^a-z0-9_]'), '');
+    final safeName = draft.attendeeName
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'\s+'), '_')
+        .replaceAll(RegExp(r'[^a-z0-9_]'), '');
     final fileName =
-        'dash_badge_${safeName.isEmpty ? 'cancun_2026' : safeName}.png';
+        'badge_${safeEvent}_${safeName.isEmpty ? 'attendee' : safeName}.png';
 
     final bytes = await WebImageDownloader.captureAndDownload(
       boundaryKey: _badgeBoundaryKey,
@@ -91,18 +122,23 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
 
   Future<void> _handleShareToInstagram() async {
     final draft = ref.read(badgeDraftProvider);
+    final config = ref.read(currentEventConfigProvider);
     final safeName = draft.attendeeName.trim().isEmpty
-        ? 'Flutter Pioneer'
+        ? (config.badgeRoleTitle.isNotEmpty
+            ? config.badgeRoleTitle
+            : 'Tech Pioneer')
         : draft.attendeeName;
     await SocialShareService.shareToInstagram(
       context,
       boundaryKey: _badgeBoundaryKey,
       attendeeName: safeName,
+      config: config,
     );
   }
 
   Future<void> _handlePublishToWall() async {
     final draft = ref.read(badgeDraftProvider);
+    final config = ref.read(currentEventConfigProvider);
     final aiState = ref.read(aiGenerationProvider);
     final badgeBytes = aiState.imageBytes.value ??
         (draft.hasPhoto ? draft.rawPhotoBytes : null);
@@ -120,7 +156,9 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
     final publishNotifier = ref.read(cardPublishProvider.notifier);
     final card = await publishNotifier.publish(
       name: draft.attendeeName.trim().isEmpty
-          ? 'Flutter Pioneer'
+          ? (config.badgeRoleTitle.isNotEmpty
+              ? config.badgeRoleTitle
+              : 'Tech Pioneer')
           : draft.attendeeName.trim(),
       email: draft.attendeeEmail.trim(),
       imageBytes: badgeBytes,
@@ -159,6 +197,10 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
     final draft = ref.watch(badgeDraftProvider);
     final aiState = ref.watch(aiGenerationProvider);
     final publishState = ref.watch(cardPublishProvider);
+    final config = ref.watch(currentEventConfigProvider);
+    final lang = ref.watch(appLanguageProvider);
+    final strings = AppStrings.get(lang);
+    final isEn = lang == AppLanguage.en;
     final isPublishing = publishState.isLoading;
     final isPublished = publishState.hasValue && publishState.value != null;
 
@@ -169,17 +211,21 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth >= 900;
+        final isCompact = constraints.maxWidth < 600;
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? 14 : 20,
+            vertical: isCompact ? 14 : 20,
+          ),
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1100),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Hero Caribbean Welcome Banner with Dash Mascot
-                  _buildHeroBeachBanner(),
+                  // Hero Welcome Banner with Mascot
+                  _buildHeroBeachBanner(config, isCompact: isCompact),
 
                   const SizedBox(height: 24),
 
@@ -187,6 +233,7 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
                   if (isAiLoading) ...[
                     AiProcessingIndicator(
                       customStatusMessage: aiState.statusMessage,
+                      statusMessages: config.loadingMessages,
                     ),
                     const SizedBox(height: 24),
                   ],
@@ -203,6 +250,8 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
                             draft: draft,
                             isPublished: isPublished,
                             isAiLoading: isAiLoading,
+                            strings: strings,
+                            isEn: isEn,
                           ),
                         ),
                         const SizedBox(width: 28),
@@ -216,6 +265,9 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
                             isPublished: isPublished,
                             aiVibeTitle:
                                 aiState.aiVibeTitle ?? draft.aiVibeTitle,
+                            config: config,
+                            strings: strings,
+                            isEn: isEn,
                           ),
                         ),
                       ],
@@ -228,6 +280,8 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
                           draft: draft,
                           isPublished: isPublished,
                           isAiLoading: isAiLoading,
+                          strings: strings,
+                          isEn: isEn,
                         ),
                         const SizedBox(height: 24),
                         _buildLiveBadgeSection(
@@ -236,6 +290,9 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
                           isPublishing: isPublishing,
                           isPublished: isPublished,
                           aiVibeTitle: aiState.aiVibeTitle ?? draft.aiVibeTitle,
+                          config: config,
+                          strings: strings,
+                          isEn: isEn,
                         ),
                       ],
                     ),
@@ -248,43 +305,24 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
     );
   }
 
-  Widget _buildHeroBeachBanner() {
+  Widget _buildHeroBeachBanner(EventConfig config, {bool isCompact = false}) {
     return GlassContainer(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompact ? 14 : 24,
+        vertical: isCompact ? 12 : 16,
+      ),
       child: Row(
         children: [
-          // Mascot from images/dash_playa.png with glow animation
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.dashCyan.withValues(alpha: 0.35),
-                  blurRadius: 16,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                'images/dash_playa.png',
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: AppColors.surfaceCard,
-                  child: const Icon(Icons.beach_access,
-                      color: AppColors.sunshineAmber, size: 36),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 18),
+          _buildHeroMascot(config, size: isCompact ? 56.0 : 80.0),
+          SizedBox(width: isCompact ? 12 : 18),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -293,9 +331,9 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
                         gradient: AppGradients.sunshinePioneer,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Text(
-                        'CANCÚN 2026',
-                        style: TextStyle(
+                      child: Text(
+                        config.eventBadgeLabel.toUpperCase(),
+                        style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w900,
                           color: AppColors.bgDark,
@@ -303,9 +341,8 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
                     const Text(
-                      'All-Access Photobooth',
+                      'EventBooth',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.dashCyan,
@@ -315,20 +352,20 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  '¡Crea tu Credencial Interactiva Oficial!',
+                Text(
+                  config.heroTitle,
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: isCompact ? 16 : 20,
                     fontWeight: FontWeight.w900,
                     color: AppColors.textPrimary,
                     letterSpacing: -0.4,
                   ),
                 ),
                 const SizedBox(height: 2),
-                const Text(
-                  'Sube o tómate una foto y personalízala con inteligencia artificial multimodal.',
+                Text(
+                  config.heroSubtitle,
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: isCompact ? 11.5 : 12.5,
                     color: AppColors.textSecondary,
                   ),
                 ),
@@ -340,10 +377,82 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
     );
   }
 
+  Widget _buildHeroMascot(EventConfig config, {double size = 80.0}) {
+    final iconSize = size * 0.45;
+    final hero = config.heroImageUrl?.trim();
+    if (hero == null || hero.isEmpty) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: const LinearGradient(
+            colors: [Color(0xFF02569B), Color(0xFF0175C2), Color(0xFF00E5FF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.dashCyan.withValues(alpha: 0.35),
+              blurRadius: 16,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: Center(
+          child: Icon(
+            Icons.auto_awesome,
+            color: AppColors.sunshineAmber,
+            size: iconSize,
+          ),
+        ),
+      );
+    }
+
+    final isNetwork = hero.startsWith('http://') || hero.startsWith('https://');
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.dashCyan.withValues(alpha: 0.35),
+            blurRadius: 16,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: ClipOval(
+        child: isNetwork
+            ? Image.network(
+                hero,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: AppColors.surfaceCard,
+                  child: Icon(Icons.flutter_dash,
+                      color: AppColors.sunshineAmber, size: iconSize),
+                ),
+              )
+            : Image.asset(
+                hero,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: AppColors.surfaceCard,
+                  child: Icon(Icons.flutter_dash,
+                      color: AppColors.sunshineAmber, size: iconSize),
+                ),
+              ),
+      ),
+    );
+  }
+
   Widget _buildInputFormSection({
     required BadgeDraft draft,
     required bool isPublished,
     required bool isAiLoading,
+    required AppStrings strings,
+    required bool isEn,
   }) {
     final draftNotifier = ref.read(badgeDraftProvider.notifier);
 
@@ -363,14 +472,17 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
                   width: 1.2,
                 ),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.lock_rounded, size: 20, color: AppColors.success),
-                  SizedBox(width: 12),
+                  const Icon(Icons.lock_rounded,
+                      size: 20, color: AppColors.success),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Credencial publicada con éxito. Para crear una nueva credencial, pulsa "Crear Otra Credencial" en el panel derecho.',
-                      style: TextStyle(
+                      isEn
+                          ? 'Badge published successfully. To create a new badge, tap "Create Another Badge" in the right panel.'
+                          : 'Credencial publicada con éxito. Para crear una nueva credencial, pulsa "Crear Otra Credencial" en el panel derecho.',
+                      style: const TextStyle(
                         fontSize: 12.5,
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
@@ -383,16 +495,19 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
             ),
             const SizedBox(height: 18),
           ],
-          const Row(
+          Row(
             children: [
-              Icon(Icons.badge_outlined, color: AppColors.dashCyan, size: 20),
-              SizedBox(width: 8),
-              Text(
-                '1. Datos del Asistente',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+              const Icon(Icons.badge_outlined,
+                  color: AppColors.dashCyan, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  isEn ? '1. Attendee Details' : '1. Datos del Asistente',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
             ],
@@ -407,6 +522,10 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
               child: NameEmailForm(
                 nameController: _nameController,
                 emailController: _emailController,
+                nameLabel: strings.nameLabel,
+                nameHint: strings.nameHint,
+                emailLabel: strings.emailLabel,
+                emailHint: strings.emailHint,
                 onNameChanged: (val) => draftNotifier.setName(val),
                 onEmailChanged: (val) => draftNotifier.setEmail(val),
               ),
@@ -414,17 +533,19 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
           ),
           const SizedBox(height: 20),
 
-          const Row(
+          Row(
             children: [
-              Icon(Icons.camera_alt_outlined,
+              const Icon(Icons.camera_alt_outlined,
                   color: AppColors.caribbeanTeal, size: 20),
-              SizedBox(width: 8),
-              Text(
-                '2. Tu Fotografía',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  isEn ? '2. Your Photo' : '2. Tu Fotografía',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
             ],
@@ -438,14 +559,18 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
               ignoring: isPublished,
               child: CameraViewfinder(
                 photoBytes: draft.hasPhoto ? draft.rawPhotoBytes : null,
+                takePhotoLabel: strings.takePhoto,
+                uploadPhotoLabel: strings.uploadPhoto,
+                retakePhotoLabel: strings.retakePhoto,
                 onCapturePressed: () async {
                   if (isPublished) return;
                   final ok = await draftNotifier.captureSelfie();
                   if (!ok && mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text('No se seleccionó o capturó ninguna imagen.'),
+                      SnackBar(
+                        content: Text(isEn
+                            ? 'No image was captured or selected.'
+                            : 'No se seleccionó o capturó ninguna imagen.'),
                       ),
                     );
                   }
@@ -455,9 +580,10 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
                   final ok = await draftNotifier.uploadPhoto();
                   if (!ok && mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text('No se seleccionó o subió ningún archivo.'),
+                      SnackBar(
+                        content: Text(isEn
+                            ? 'No file was selected or uploaded.'
+                            : 'No se seleccionó o subió ningún archivo.'),
                       ),
                     );
                   }
@@ -499,8 +625,10 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
               ),
               label: Text(
                 isPublished
-                    ? 'Credencial Publicada'
-                    : 'Transformar con Dash IA',
+                    ? (isEn ? 'Badge Published' : 'Credencial Publicada')
+                    : (isEn
+                        ? 'Transform with Dash AI'
+                        : 'Transformar con Dash IA'),
                 style: TextStyle(
                   color: isPublished ? Colors.white60 : AppColors.bgDark,
                   fontSize: 15,
@@ -508,9 +636,10 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: (draft.hasPhoto && !isPublished && !isAiLoading)
-                    ? Colors.transparent
-                    : Colors.white12,
+                backgroundColor:
+                    (draft.hasPhoto && !isPublished && !isAiLoading)
+                        ? Colors.transparent
+                        : Colors.white12,
                 shadowColor: Colors.transparent,
                 minimumSize: const Size(double.infinity, 52),
               ),
@@ -526,6 +655,9 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
     required dynamic badgeBytes,
     required bool isPublishing,
     required bool isPublished,
+    required EventConfig config,
+    required AppStrings strings,
+    required bool isEn,
     String? aiVibeTitle,
   }) {
     return Column(
@@ -536,10 +668,12 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
             const Icon(Icons.preview_rounded,
                 color: AppColors.sunshineAmber, size: 20),
             const SizedBox(width: 8),
-            const Expanded(
+            Expanded(
               child: Text(
-                'Vista Previa Oficial (En Vivo)',
-                style: TextStyle(
+                isEn
+                    ? 'Official Live Preview'
+                    : 'Vista Previa Oficial (En Vivo)',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: AppColors.textPrimary,
@@ -554,14 +688,14 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: AppColors.success),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.check, size: 12, color: AppColors.success),
-                    SizedBox(width: 4),
+                    const Icon(Icons.check, size: 12, color: AppColors.success),
+                    const SizedBox(width: 4),
                     Text(
-                      'Listo',
-                      style: TextStyle(
+                      isEn ? 'Ready' : 'Listo',
+                      style: const TextStyle(
                           fontSize: 10.5,
                           color: AppColors.success,
                           fontWeight: FontWeight.bold),
@@ -573,23 +707,27 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
         ),
         const SizedBox(height: 14),
 
-        // The Official Badge Card rendered live with adaptive width
+        // The Official Badge Card rendered live with adaptive width & FittedBox for zero overflow
         Center(
           child: LayoutBuilder(
             builder: (context, cardConstraints) {
               final cardWidth =
                   (cardConstraints.maxWidth - 8).clamp(260.0, 350.0);
-              return OfficialBadgeCard(
-                repaintBoundaryKey: _badgeBoundaryKey,
-                attendeeName: draft.attendeeName.trim().isEmpty
-                    ? 'Tu Nombre Aquí'
-                    : draft.attendeeName,
-                attendeeEmail: draft.attendeeEmail.trim().isEmpty
-                    ? 'tu-correo@flutterconf.latam'
-                    : draft.attendeeEmail,
-                badgeImageBytes: badgeBytes,
-                aiVibeTitle: aiVibeTitle ?? draft.aiVibeTitle,
-                width: cardWidth,
+              return FittedBox(
+                fit: BoxFit.scaleDown,
+                child: OfficialBadgeCard(
+                  repaintBoundaryKey: _badgeBoundaryKey,
+                  attendeeName: draft.attendeeName.trim().isEmpty
+                      ? (isEn ? 'Your Name Here' : 'Tu Nombre Aquí')
+                      : draft.attendeeName,
+                  attendeeEmail: draft.attendeeEmail.trim().isEmpty
+                      ? 'asistente@${config.hashtag.replaceAll('#', '').toLowerCase()}.com'
+                      : draft.attendeeEmail,
+                  badgeImageBytes: badgeBytes,
+                  aiVibeTitle: aiVibeTitle ?? draft.aiVibeTitle,
+                  width: cardWidth,
+                  config: config,
+                ),
               );
             },
           ),
@@ -612,9 +750,11 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
           child: ElevatedButton.icon(
             onPressed: _handleDownloadBadge,
             icon: const Icon(Icons.file_download_outlined, color: Colors.white),
-            label: const Text(
-              'Descargar Credencial HD (PNG)',
-              style: TextStyle(
+            label: Text(
+              isEn
+                  ? 'Download HD Badge (PNG)'
+                  : 'Descargar Credencial HD (PNG)',
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 14.5,
@@ -653,9 +793,9 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
           child: ElevatedButton.icon(
             onPressed: _handleShareToInstagram,
             icon: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
-            label: const Text(
-              'Compartir en Instagram 📸',
-              style: TextStyle(
+            label: Text(
+              isEn ? 'Share on Instagram 📸' : 'Compartir en Instagram 📸',
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 14.5,
@@ -697,22 +837,26 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '¡Credencial en el Mural! 🎉',
-                        style: TextStyle(
+                        isEn
+                            ? 'Badge on the Wall! 🎉'
+                            : '¡Credencial en el Mural! 🎉',
+                        style: const TextStyle(
                           color: AppColors.success,
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
                       ),
-                      SizedBox(height: 2),
+                      const SizedBox(height: 2),
                       Text(
-                        'Tu credencial ya brilla en el mural en vivo del evento.',
-                        style: TextStyle(
+                        isEn
+                            ? 'Your badge is now shining on the live event mural.'
+                            : 'Tu credencial ya brilla en el mural en vivo del evento.',
+                        style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12,
                         ),
@@ -745,9 +889,9 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
                 color: Colors.black87,
                 size: 20,
               ),
-              label: const Text(
-                'Crear Otra Credencial ✨',
-                style: TextStyle(
+              label: Text(
+                isEn ? 'Create Another Badge ✨' : 'Crear Otra Credencial ✨',
+                style: const TextStyle(
                   color: Colors.black87,
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
@@ -783,8 +927,12 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
                   ),
             label: Text(
               isPublishing
-                  ? 'Compartiendo en el Mural...'
-                  : 'Publicar en Mural de Recuerdos',
+                  ? (isEn
+                      ? 'Publishing to Mural...'
+                      : 'Compartiendo en el Mural...')
+                  : (isEn
+                      ? 'Publish to Live Mural'
+                      : 'Publicar en Mural de Recuerdos'),
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
             style: ElevatedButton.styleFrom(
@@ -807,9 +955,9 @@ class _PhotoboothScreenState extends ConsumerState<PhotoboothScreen> {
               size: 16,
               color: AppColors.textSecondary,
             ),
-            label: const Text(
-              'Limpiar y reiniciar formulario',
-              style: TextStyle(
+            label: Text(
+              isEn ? 'Clear and reset form' : 'Limpiar y reiniciar formulario',
+              style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,

@@ -40,4 +40,9 @@ class UserCardRepositoryImpl implements IUserCardRepository {
           (models) => models.map((m) => m.toDomain()).toList(),
         );
   }
+
+  @override
+  Future<void> clearAllUserCards() async {
+    await _firestoreDataSource.deleteAllCards();
+  }
 }

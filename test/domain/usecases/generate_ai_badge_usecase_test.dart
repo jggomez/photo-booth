@@ -49,6 +49,31 @@ void main() {
           )).called(1);
     });
 
+    test('forwards optional promptTemplate and fallbackTitles to service',
+        () async {
+      when(() => mockAiService.generateDashBadge(
+            photoBytes: any(named: 'photoBytes'),
+            attendeeName: any(named: 'attendeeName'),
+            promptTemplate: any(named: 'promptTemplate'),
+            fallbackTitles: any(named: 'fallbackTitles'),
+          )).thenAnswer((_) async => expectedResult);
+
+      final customTitles = ['Title 1', 'Title 2'];
+      await useCase.execute(
+        photoBytes: testBytes,
+        attendeeName: 'Alex Flutter',
+        promptTemplate: 'Custom prompt for {name}',
+        fallbackTitles: customTitles,
+      );
+
+      verify(() => mockAiService.generateDashBadge(
+            photoBytes: testBytes,
+            attendeeName: 'Alex Flutter',
+            promptTemplate: 'Custom prompt for {name}',
+            fallbackTitles: customTitles,
+          )).called(1);
+    });
+
     test('throws ArgumentError when name has fewer than 2 characters',
         () async {
       expect(

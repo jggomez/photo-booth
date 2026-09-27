@@ -11,10 +11,12 @@ enum RouletteStatus { spinning, podium }
 /// and reveals the 3 winners on an authentic F1 3-tiered podium (P1, P2, P3).
 class F1RouletteDialog extends StatefulWidget {
   final List<UserCard> cards;
+  final String? eventTitle;
 
   const F1RouletteDialog({
     super.key,
     required this.cards,
+    this.eventTitle,
   });
 
   @override
@@ -81,9 +83,15 @@ class _F1RouletteDialogState extends State<F1RouletteDialog>
     if (email == null) return false;
     final trimmed = email.trim().toLowerCase();
     if (trimmed.isEmpty) return false;
-    if (trimmed.contains('pioneer@flutterconf.latam') ||
-        trimmed.contains('asistente@flutterconf.latam') ||
-        trimmed.contains('dash@flutterconf.latam')) {
+    if (trimmed.contains('pioneer@flutterconf') ||
+        trimmed.contains('asistente@flutterconf') ||
+        trimmed.contains('dash@flutterconf') ||
+        trimmed.contains('pioneer@devfest') ||
+        trimmed.contains('asistente@devfest') ||
+        trimmed.contains('dash@devfest') ||
+        trimmed.contains('pioneer@event') ||
+        trimmed.contains('asistente@event') ||
+        trimmed.contains('dash@event')) {
       return false;
     }
     return true;
@@ -306,9 +314,9 @@ class _F1RouletteDialogState extends State<F1RouletteDialog>
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'GRAN PREMIO CANCÚN 2026',
-                    style: TextStyle(
+                  Text(
+                    'GRAN PREMIO ${(widget.eventTitle ?? "DEVFEST QUITO 2026").toUpperCase()}',
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
@@ -558,22 +566,27 @@ class _F1RouletteDialogState extends State<F1RouletteDialog>
                 ),
               ],
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('🍾', style: TextStyle(fontSize: 18)),
-                SizedBox(width: 8),
-                Text(
-                  '¡PODIO DEL GRAN PREMIO FLUTTERCONF! 🏆',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.bgDark,
-                    letterSpacing: 0.8,
+                const Text('🍾', style: TextStyle(fontSize: 18)),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    '¡PODIO DEL GRAN PREMIO ${(widget.eventTitle ?? "DEVFEST QUITO 2026").toUpperCase()}! 🏆',
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.bgDark,
+                      letterSpacing: 0.8,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                SizedBox(width: 8),
-                Text('🍾', style: TextStyle(fontSize: 18)),
+                const SizedBox(width: 8),
+                const Text('🍾', style: TextStyle(fontSize: 18)),
               ],
             ),
           ),

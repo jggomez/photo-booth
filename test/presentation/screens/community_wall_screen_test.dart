@@ -79,7 +79,7 @@ void main() {
 
     expect(find.textContaining('Álbum de Recuerdos en Vivo'), findsOneWidget);
     expect(find.text('Lucia Alvarez'), findsOneWidget);
-    expect(find.textContaining('1 Fotos de Flutter Pioneers'), findsOneWidget);
+    expect(find.textContaining('1 Fotos de DEVFEST PIONEERs'), findsOneWidget);
     expect(find.text('Ruleta F1 Premios'), findsWidgets);
   });
 
@@ -125,7 +125,7 @@ void main() {
     await tester.tap(rouletteButton);
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('GRAN PREMIO CANCÚN 2026'), findsOneWidget);
+    expect(find.text('GRAN PREMIO DEVFEST QUITO 2026'), findsOneWidget);
   });
 
   testWidgets(

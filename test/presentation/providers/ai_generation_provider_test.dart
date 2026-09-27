@@ -39,6 +39,8 @@ void main() {
       when(() => mockUseCase.execute(
             photoBytes: any(named: 'photoBytes'),
             attendeeName: any(named: 'attendeeName'),
+            promptTemplate: any(named: 'promptTemplate'),
+            fallbackTitles: any(named: 'fallbackTitles'),
           )).thenAnswer((_) async => aiResult);
 
       final result = await notifier.generateBadge(
@@ -49,8 +51,8 @@ void main() {
       expect(result, equals(aiResult));
       expect(notifier.state.imageBytes.value, equals(outputBytes));
       expect(notifier.state.aiVibeTitle, equals(vibe));
-      expect(notifier.state.statusMessage,
-          contains('¡Tu credencial caribeña está lista!'));
+      expect(
+          notifier.state.statusMessage, contains('¡Tu credencial está lista!'));
     });
 
     test('generateBadge handles error and updates state to AsyncError',
@@ -60,6 +62,8 @@ void main() {
       when(() => mockUseCase.execute(
             photoBytes: any(named: 'photoBytes'),
             attendeeName: any(named: 'attendeeName'),
+            promptTemplate: any(named: 'promptTemplate'),
+            fallbackTitles: any(named: 'fallbackTitles'),
           )).thenThrow(Exception('API error'));
 
       final result = await notifier.generateBadge(
@@ -83,6 +87,8 @@ void main() {
       when(() => mockUseCase.execute(
             photoBytes: any(named: 'photoBytes'),
             attendeeName: any(named: 'attendeeName'),
+            promptTemplate: any(named: 'promptTemplate'),
+            fallbackTitles: any(named: 'fallbackTitles'),
           )).thenAnswer((_) async => aiResult);
 
       await notifier.generateBadge(

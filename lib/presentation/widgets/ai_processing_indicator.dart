@@ -8,10 +8,12 @@ import 'glass_container.dart';
 /// generates the attendee's Caribbean Dash avatar.
 class AiProcessingIndicator extends StatefulWidget {
   final String? customStatusMessage;
+  final List<String>? statusMessages;
 
   const AiProcessingIndicator({
     super.key,
     this.customStatusMessage,
+    this.statusMessages,
   });
 
   @override
@@ -24,14 +26,20 @@ class _AiProcessingIndicatorState extends State<AiProcessingIndicator>
   Timer? _messageTimer;
   int _messageIndex = 0;
 
-  static const List<String> _statusMessages = [
-    'Dash está preparando tu avatar caribeño...',
-    'Inyectando estilo FlutterConf LATAM Cancún 2026...',
-    'Modelando rasgos con Gemini 3.1 Flash Image...',
-    'Agregando lentes de sol y gorrito playero a Dash...',
-    'Aplicando sellos de Flutter Pioneer...',
+  static const List<String> _defaultStatusMessages = [
+    'Preparando tu avatar para el evento...',
+    'Inyectando el estilo oficial de la conferencia...',
+    'Modelando rasgos con inteligencia artificial multimodal...',
+    'Aplicando sellos de credencial oficial...',
     'Casi listo... ¡Generando tu credencial HD!',
   ];
+
+  List<String> get _activeMessages {
+    if (widget.statusMessages != null && widget.statusMessages!.isNotEmpty) {
+      return widget.statusMessages!;
+    }
+    return _defaultStatusMessages;
+  }
 
   @override
   void initState() {
@@ -44,7 +52,7 @@ class _AiProcessingIndicatorState extends State<AiProcessingIndicator>
     _messageTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
       if (mounted) {
         setState(() {
-          _messageIndex = (_messageIndex + 1) % _statusMessages.length;
+          _messageIndex = (_messageIndex + 1) % _activeMessages.length;
         });
       }
     });
@@ -59,8 +67,9 @@ class _AiProcessingIndicatorState extends State<AiProcessingIndicator>
 
   @override
   Widget build(BuildContext context) {
-    final currentMessage =
-        widget.customStatusMessage ?? _statusMessages[_messageIndex];
+    final messages = _activeMessages;
+    final safeIndex = _messageIndex % messages.length;
+    final currentMessage = widget.customStatusMessage ?? messages[safeIndex];
 
     return GlassContainer(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),

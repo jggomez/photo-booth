@@ -14,4 +14,7 @@ abstract class IUserCardRepository {
 
   /// Streams real-time updates of all published community cards from Firestore.
   Stream<List<UserCard>> streamCommunityCards();
+
+  /// Deletes all user cards from the community album.
+  Future<void> clearAllUserCards();
 }

@@ -96,5 +96,14 @@ void main() {
       expect(list.first.name, 'Ana');
       verify(() => mockFirestore.streamCards()).called(1);
     });
+
+    test('clearAllUserCards delegates to firestore data source deleteAllCards',
+        () async {
+      when(() => mockFirestore.deleteAllCards()).thenAnswer((_) async {});
+
+      await repository.clearAllUserCards();
+
+      verify(() => mockFirestore.deleteAllCards()).called(1);
+    });
   });
 }

@@ -5,21 +5,26 @@ import '../theme/app_gradients.dart';
 import '../utils/social_share_service.dart';
 import 'official_badge_card.dart';
 
+import '../../domain/entities/event_config.dart';
+
 /// Modal dialog showing the high-resolution detail of an attendee's badge from the Community Wall,
 /// enabling HD download and Instagram sharing.
 class BadgeDetailModal extends StatelessWidget {
   final UserCard card;
+  final EventConfig? config;
 
   const BadgeDetailModal({
     super.key,
     required this.card,
+    this.config,
   });
 
-  static Future<void> show(BuildContext context, UserCard card) {
+  static Future<void> show(BuildContext context, UserCard card,
+      [EventConfig? config]) {
     return showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.8),
-      builder: (context) => BadgeDetailModal(card: card),
+      builder: (context) => BadgeDetailModal(card: card, config: config),
     );
   }
 
@@ -85,6 +90,7 @@ class BadgeDetailModal extends StatelessWidget {
                     attendeeEmail: card.email,
                     badgeImageUrl: card.imageUri,
                     width: 350,
+                    config: config,
                   ),
                 ),
 

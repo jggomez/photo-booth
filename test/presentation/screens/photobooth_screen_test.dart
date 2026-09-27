@@ -124,6 +124,8 @@ void main() {
     when(() => mockGenerateAiUseCase.execute(
           photoBytes: any(named: 'photoBytes'),
           attendeeName: any(named: 'attendeeName'),
+          promptTemplate: any(named: 'promptTemplate'),
+          fallbackTitles: any(named: 'fallbackTitles'),
         )).thenAnswer((_) async => AiBadgeResult(
           imageBytes: transformed,
           aiVibeTitle: vibe,

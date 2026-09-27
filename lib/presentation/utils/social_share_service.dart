@@ -6,12 +6,14 @@ import 'package:flutter/services.dart';
 import 'package:universal_html/html.dart' as html;
 import '../theme/app_colors.dart';
 
+import '../../domain/entities/event_config.dart';
+
 /// Service providing unified download and Instagram sharing capabilities
 /// across both the Photobooth Studio and the Community Wall.
 class SocialShareService {
-  static const String officialHashtag = '#flutterconflatam26';
+  static const String officialHashtag = '#devfestquito26';
   static const String shareCaption =
-      '¡Mi credencial oficial de FlutterConf LATAM Cancún 2026 con Dash! 🦜✨🌴 #flutterconflatam26';
+      '¡Mi credencial oficial de DevFest Quito 2026 con Dash! 🦜✨🌋 #devfestquito26';
 
   /// Rasterizes the widget wrapped in [boundaryKey] into PNG bytes.
   static Future<Uint8List?> captureWidgetPng({
@@ -40,13 +42,22 @@ class SocialShareService {
     BuildContext context, {
     required GlobalKey boundaryKey,
     required String attendeeName,
+    EventConfig? config,
   }) async {
     final sanitized = attendeeName
         .trim()
         .toLowerCase()
         .replaceAll(RegExp(r'\s+'), '_')
         .replaceAll(RegExp(r'[^a-z0-9_]'), '');
-    final fileName = 'cancun_badge_${sanitized.isEmpty ? 'flutter' : sanitized}_2026.png';
+    final eventSlug = (config != null)
+        ? config.eventName
+            .trim()
+            .toLowerCase()
+            .replaceAll(RegExp(r'\s+'), '_')
+            .replaceAll(RegExp(r'[^a-z0-9_]'), '')
+        : 'devfest';
+    final fileName =
+        'badge_${eventSlug}_${sanitized.isEmpty ? 'attendee' : sanitized}.png';
 
     final bytes = await captureWidgetPng(boundaryKey: boundaryKey);
     if (bytes == null) {
@@ -91,16 +102,23 @@ class SocialShareService {
     BuildContext context, {
     required GlobalKey boundaryKey,
     required String attendeeName,
+    EventConfig? config,
   }) async {
+    final activeCaption = (config != null)
+        ? config.interpolateShareCaption(attendeeName)
+        : shareCaption;
+    final activeHashtag = config?.hashtag ?? officialHashtag;
+
     // 1. Download the high-res badge image
     await downloadBadge(
       context,
       boundaryKey: boundaryKey,
       attendeeName: attendeeName,
+      config: config,
     );
 
     // 2. Copy caption with official hashtag to clipboard
-    await Clipboard.setData(const ClipboardData(text: shareCaption));
+    await Clipboard.setData(ClipboardData(text: activeCaption));
 
     // 3. Try native Web Share API (Safari iOS / Android Chrome)
     if (kIsWeb) {
@@ -108,8 +126,8 @@ class SocialShareService {
         final nav = html.window.navigator as dynamic;
         if (nav != null && nav.share != null) {
           await nav.share({
-            'title': 'Cancun DashBooth — FlutterConf LATAM 2026',
-            'text': shareCaption,
+            'title': config?.eventName ?? 'EventBooth',
+            'text': activeCaption,
             'url': html.window.location.href,
           });
         }
@@ -122,14 +140,18 @@ class SocialShareService {
     if (context.mounted) {
       showDialog(
         context: context,
-        builder: (ctx) => const _InstagramShareGuideDialog(),
+        builder: (ctx) => _InstagramShareGuideDialog(hashtag: activeHashtag),
       );
     }
   }
 }
 
 class _InstagramShareGuideDialog extends StatelessWidget {
-  const _InstagramShareGuideDialog();
+  final String hashtag;
+
+  const _InstagramShareGuideDialog({
+    this.hashtag = SocialShareService.officialHashtag,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -176,7 +198,8 @@ class _InstagramShareGuideDialog extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Center(
-                    child: Icon(Icons.camera_alt, color: Colors.white, size: 26),
+                    child:
+                        Icon(Icons.camera_alt, color: Colors.white, size: 26),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -227,7 +250,7 @@ class _InstagramShareGuideDialog extends StatelessWidget {
               iconColor: AppColors.dashCyan,
               title: '2. Hashtag copiado al portapapeles',
               description:
-                  'El texto con #flutterconflatam26 está listo para pegarse en tu descripción.',
+                  'El texto con $hashtag está listo para pegarse en tu descripción.',
             ),
             const SizedBox(height: 14),
 
@@ -284,7 +307,8 @@ class _InstagramShareGuideDialog extends StatelessWidget {
                     child: ElevatedButton.icon(
                       onPressed: () {
                         if (kIsWeb) {
-                          html.window.open('https://www.instagram.com', '_blank');
+                          html.window
+                              .open('https://www.instagram.com', '_blank');
                         }
                         Navigator.of(context).pop();
                       },

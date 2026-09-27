@@ -1,107 +1,193 @@
-# 🏖️ Cancun DashBooth — FlutterConf LATAM 2026
+# 📸 EventBooth — Open-Source AI Photobooth & Badge Platform
 
 [![Flutter Web](https://img.shields.io/badge/Platform-Flutter%20Web-02569B?logo=flutter)](https://flutter.dev)
-[![Firebase AI Logic](https://img.shields.io/badge/AI-Firebase%20AI%20%7C%20Gemini-FFCA28?logo=firebase)](https://firebase.google.com)
+[![Gemini Multimodal AI](https://img.shields.io/badge/AI-Gemini%203.1%20Flash%20Image-FFCA28?logo=google)](https://aistudio.google.com)
 [![Clean Architecture](https://img.shields.io/badge/Architecture-Clean%20Architecture%20%2B%20Riverpod-00B4D8)](docs/tech-stack.md)
-[![Quality Gates](https://img.shields.io/badge/Tests-57%2F57%20Passed%20(100%25)-green)](test/)
-[![Harness Lab](https://img.shields.io/badge/Hands--on%20Lab-AI%20Harness%20Engineering-orange)](lab/README.md)
-[![Live Production App](https://img.shields.io/badge/Live%20App-dashbooth--cancun--2026.web.app-success?logo=firebase)](https://dashbooth-cancun-2026.web.app)
+[![Automated Tests](https://img.shields.io/badge/Tests-100%25%20Passed-success)](test/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-event--booth--2026.web.app-success?logo=firebase)](https://event-booth-2026.web.app)
 
-> 🌐 **App en Producción (Firebase Hosting):** [https://dashbooth-cancun-2026.web.app](https://dashbooth-cancun-2026.web.app)
-
-**Cancun DashBooth** es la aplicación web interactiva oficial de **FlutterConf LATAM 2026 en Cancún, México**.
-
-Diseñada para una experiencia de usuario fluida y festiva, permite a los asistentes registrarse sin autenticación (**Zero-Auth**), capturar una selfie desde el navegador, transformarla con **Firebase AI Logic (`gemini-3.1-flash-image`)** en un retrato ilustrado en la playa de Cancún junto a **Dash** (la mascota oficial de Flutter), componer su credencial oficial VIP con el hashtag `#flutterconflatam26`, publicarla en tiempo real en un mural colaborativo, participar en un sorteo estilo **Fórmula 1** con podio tridimensional y compartir su credencial en **Instagram**.
+> 🌐 **Live Demo:** [https://event-booth-2026.web.app](https://event-booth-2026.web.app)  
+> ⚙️ **Admin Control Room:** [https://event-booth-2026.web.app/#/admin](https://event-booth-2026.web.app/#/admin) *(Default PIN: `2026` or click the ⚙️ gear icon in the top header)*
 
 ---
 
-## 🚀 Inicio Rápido (Quickstart)
+## 🌟 What is EventBooth?
 
-### 1. Aprovisionar el Harness y las Agent Skills
-Ejecuta el script automatizado para instalar las skills oficiales de Flutter, Dart y Firebase, junto con las del repositorio de ingeniería avanzada [jggomez/expert-ai-developer-skills](https://github.com/jggomez/expert-ai-developer-skills):
+**EventBooth** is a production-grade, open-source Flutter Web application designed for tech conferences, meetups, hackathons, and community summits.
 
+EventBooth transforms traditional event check-ins and photo booths into an unforgettable, gamified experience:
+- **Zero-Auth Onboarding**: Attendees scan a QR code or visit the URL on any mobile device or desktop browser without downloading an app or creating an account.
+- **Multimodal AI Badges**: Captures or uploads a photo and uses **Gemini 3.1 Flash Image** to render a personalized, high-definition badge celebrating your event's theme, city, and culture.
+- **Real-Time Community Wall**: Displays all attendee credentials on a live, collaborative photo album with real-time updates.
+- **Formula 1 Grand Prix Prize Roulette**: A high-energy gamified raffle spinner that reveals 3 lucky winners on an authentic 3-tiered podium (P1, P2, P3).
+- **Secret Admin Control Room (`/admin`)**: A PIN-protected dashboard allowing organizers to dynamically brand the entire event in under 60 seconds—customizing logos, hero mascots, prompts, Gemini API keys, exporting attendees to CSV, and wiping the album between event days.
+- **Real-Time Bilingual Support**: Instant one-click toggle between **English (🇺🇸)** and **Spanish (🇨🇴)** with live UI updates across all screens.
+
+---
+
+## 📸 Screenshots & Walkthrough
+
+### 1. Photobooth & Live Badge Generator
+*Interactive responsive camera viewfinder, file uploader, attendee details, and real-time badge preview with holographic borders.*
+
+![EventBooth Photobooth](screenshots/1.png)
+
+---
+
+### 2. High-Definition Badge & Social Sharing
+*Download high-resolution PNG badges and share directly to Instagram and social networks with event hashtags and dynamic role pills.*
+
+![Official Badge Generation](screenshots/2.png)
+
+---
+
+### 3. Real-Time Community Photo Wall
+*Live collaborative photo gallery streaming newly generated badges with organic scrapbook tilts, hover straightening animations, and modal detail views.*
+
+![Live Community Wall](screenshots/3.png)
+
+---
+
+### 4. Formula 1 Grand Prix Prize Roulette & 3D Podium
+*Gamified raffle modal with high-speed attendee cycling, starting lights, and a celebratory 3-tiered podium with confetti.*
+
+![Formula 1 Roulette & Podium](screenshots/4.png)
+
+---
+
+### 5. Secret Admin Dashboard (`/admin`)
+*Comprehensive control room: live logo & mascot preview with direct URL editing, custom Gemini API key configuration, attendee CSV export, and album management.*
+
+![Admin Configuration Dashboard](screenshots/5.png)
+
+---
+
+## ✨ Key Features
+
+### 🎨 100% Configurable per Event
+- **Instant Theming**: Customize Event Name, Tagline, Location, Official Hashtag, Badge Role Pill (`DEVFEST PIONEER`, `TECH PIONEER`, `VIP ATTENDEE`), and Community Album Tagline.
+- **Visual Asset Management**:
+  - Live 70x70 preview boxes with loading indicators and error fallbacks.
+  - Paste any public image URL (HTTPS, CDN, Drive, Imgur) or upload files directly to Cloud Storage.
+  - One-click reset to generic conference defaults.
+- **Built-in Presets**: Switch instantly between presets (e.g. *DevFest Quito 2026*, *Cancún 2026*, *Generic Tech Event*).
+
+### 🤖 Gemini AI Multimodal Integration
+- Powered by Google's **Gemini 3.1 Flash Image** via Firebase Vertex AI and Google AI Studio REST APIs.
+- **Custom Gemini API Key**: Event organizers can paste their own free Gemini API key from [Google AI Studio](https://aistudio.google.com) directly in the Admin Panel without changing code or rebuilding.
+- **Customizable Prompt Templates**: Adjust the multimodal prompt with dynamic tags (`{name}`, `{eventName}`, `{location}`, `{hashtag}`) and regional phrases catalog.
+
+### 📊 Community Album & Data Management
+- **One-Click CSV Export**: Export all registered attendees (`Nombre,Email,Evento,Fecha`) to a `.csv` file formatted with UTF-8 BOM (`﻿`) for perfect compatibility with Microsoft Excel and Google Sheets.
+- **One-Click Album Reset**: Delete all cards safely with an irreversible confirmation modal using Cloud Firestore chunked 500-batch operations.
+
+### 🌐 Real-Time Bilingual Internationalization (i18n)
+- Seamless real-time switching between **English (🇺🇸)** and **Spanish (🇨🇴)**.
+- Covers navigation, form validation, photobooth steps, community wall, F1 roulette, and the entire admin dashboard.
+
+### 📱 Responsive & Zero-Auth Architecture
+- Fluidly scales from 320px mobile viewports up to 4K conference hall projectors.
+- Zero login friction: attendees jump straight into creating their badge.
+
+---
+
+## 🚀 Quickstart Guide
+
+### Prerequisites
+- [Flutter SDK](https://flutter.dev/docs/get-started/install) (version 3.24 or higher)
+- [Git](https://git-scm.com)
+- Modern Web Browser (Google Chrome, Safari, Firefox, Edge)
+
+### 1. Clone & Run Locally
 ```bash
-chmod +x skills.sh
-./skills.sh
+# Clone the repository
+git clone https://github.com/jggomez/photo-booth.git
+cd event-booth
+
+# Give execution permissions and launch
+chmod +x run-locally.sh
+./run-locally.sh
 ```
 
-### 2. Instalar Dependencias y Ejecutar Pruebas
+Or run directly with Flutter:
 ```bash
 flutter pub get
-dart analyze --fatal-infos
-flutter test
+flutter run -d chrome --web-port 8080
 ```
+Open [http://localhost:8080](http://localhost:8080) in your browser.
 
-### 3. Ejecutar Localmente en el Navegador
+---
+
+### 2. Access the Secret Admin Panel
+1. Navigate to [http://localhost:8080/#/admin](http://localhost:8080/#/admin) or tap the ⚙️ gear icon in the top header.
+2. Enter the default administrator PIN: **`2026`**.
+3. Configure your event details, upload your logo, paste your Gemini API key, and hit **"Guardar Configuración en Vivo" / "Save Live Configuration"**.
+4. Changes take effect across all connected devices in real time via Cloud Firestore!
+
+---
+
+### 3. Deploy to Firebase Hosting
+
+You can deploy EventBooth to your own Firebase project in two commands:
+
 ```bash
-flutter run -d chrome
-```
-o probar el build de producción CanvasKit:
-```bash
+# 1. Build optimized production web bundle
 flutter build web --release
-python3 -m http.server 8080 -d build/web
-# Abrir en http://localhost:8080
+
+# 2. Deploy hosting and security rules
+firebase deploy --only hosting,firestore:rules,storage
 ```
 
-### 4. Screenshots
-
-<img width="1200" height="948" alt="Screenshot 2026-09-20 at 9 51 05 p m" src="https://github.com/user-attachments/assets/ba669c93-2571-46dd-8078-9a817da7a1e1" />
-
 ---
 
-<img width="1264" height="777" alt="Screenshot 2026-09-20 at 9 52 21 p m" src="https://github.com/user-attachments/assets/8f1b3e05-c29a-4af6-800c-96482f54f3c1" />
+## 🏛️ Architecture & Clean Code
 
----
-
-<img width="1254" height="861" alt="Screenshot 2026-09-20 at 9 52 29 p m" src="https://github.com/user-attachments/assets/b77c818b-626d-486f-aff0-13bc9dec5feb" />
-
----
-
-## 📚 Laboratorio Paso a Paso (`lab/`)
-
-¿Quieres aprender a construir esta aplicación desde cero utilizando **AI Harness Engineering**, **Agent Skills** y **Autonomous Looping (`/goal`)**?
-
-Explora la guía completa en el directorio [`lab/`](lab/README.md):
-
-* 📘 **[Módulo 1: Harness Engineering, Skills y Plugin senior-dev-flutter](lab/01-harness-and-skills.md):** Configuración del entorno con `skills.sh`, MCP de Dart y reglas del proyecto.
-* 📗 **[Módulo 2: Spec-First & Documentación Viva](lab/02-spec-and-doc-driven-dev.md):** Cómo crear `docs/tech-stack.md`, `docs/user-stories.md` y `docs/plan.md` antes de codificar.
-* 📙 **[Módulo 3: Demostración de Looping con /goal para Construir el MVP](lab/03-looping-con-goal-mvp.md):** Anatomía de los bucles autónomos, prompts maestros y autocorrección.
-* 📕 **[Módulo 4: Paso a Paso de la Implementación Core](lab/04-core-implementation-paso-a-paso.md):** Clean Architecture en Domain, Data con Firebase AI y Presentation con Riverpod.
-* 📒 **[Módulo 5: Refinamiento Iterativo y Lecciones del Pulido](lab/05-refinamiento-iterativo-y-maduracion.md):** Protección de cuota IA, prompt de Dash, ruleta F1, Zero-Fake-Data y CanvasKit responsive.
-* 📓 **[Módulo 6: Quality Gates, Testing Sensorial y Despliegue](lab/06-verificacion-calidad-y-despliegue.md):** Auditoría estática, 57 tests verdes y despliegue en Firebase Hosting.
-* 📖 **[Flutter Engineering Playbook](lab/flutter-playbook.md):** Guía completa de capacidades, The Three Trees, DevTools, vocabulario, patrones de diseño, librerías y buenas prácticas.
-
----
-
-## 🏛️ Arquitectura del Sistema
-
-El proyecto sigue una estricta **Clean Architecture desacoplada**:
+EventBooth strictly adheres to **Clean Architecture** and **SOLID principles**:
 
 ```text
 lib/
-├── domain/            # 100% Dart puro (BadgeDraft, AiBadgeResult, UserCard, Casos de Uso)
-├── data/              # Firebase AI (gemini-3.1-flash-image dual-channel), Storage y Firestore
-└── presentation/      # Notifiers Riverpod, PhotoboothScreen, CommunityWallScreen, F1RouletteDialog
+├── domain/                  # 100% Pure Dart — Core business logic
+│   ├── entities/            # EventConfig, UserCard, BadgeDraft, AiBadgeResult
+│   ├── repositories/        # Repository interfaces (IEventConfigRepository, IUserCardRepository, IAiBadgeService)
+│   └── usecases/            # GenerateAiBadge, ClearCommunityWall, SaveEventConfig, WatchEventConfig
+├── data/                    # Data Layer & Infrastructure
+│   ├── models/              # DTOs (EventConfigModel, UserCardModel) with Firestore serialization
+│   ├── datasources/         # Firestore (AppConfig, UserCards), Firebase Storage, AI Remote DataSource
+│   └── repositories/        # Concrete repository implementations
+└── presentation/            # Presentation & UI Layer
+    ├── localization/        # AppStrings dictionary for English & Spanish
+    ├── providers/           # Riverpod state notifiers, streams, and dependency injection
+    ├── screens/             # MainHomeScreen, PhotoboothScreen, CommunityWallScreen, AdminConfigScreen
+    ├── widgets/             # OfficialBadgeCard, CommunityBadgeItem, F1RouletteDialog, LanguageFlagToggle
+    └── utils/               # WebImageDownloader, WebCsvExporter, SocialShareService
 ```
 
-Para conocer todas las decisiones y justificaciones técnicas, consulta:
-* [Documento de Stack Tecnológico e Invariantes](docs/tech-stack.md)
-* [Historias de Usuario y Criterios Gherkin BDD](docs/user-stories.md)
-* [Plan Maestro de Ejecución](docs/plan.md)
-* [Tokens y Sistema de Diseño UI/UX Caribeño](docs/ui-ux-design.md)
+### Key Engineering Standards
+- **Zero `dart:io` Imports**: Fully compatible with Flutter Web and CanvasKit/Wasm runtimes.
+- **Memory Safety**: All `TextEditingController`, `AnimationController`, and `StreamSubscription` instances are strictly disposed.
+- **100% Automated Test Coverage**: Unit tests for use cases and models; widget tests with mocked dependencies.
 
 ---
 
-## 🛠️ Tecnologías y Plugins
+## 🧪 Running Automated Tests
 
-* **Framework:** Flutter Web (CanvasKit/Wasm).
-* **Gestión de Estado:** `flutter_riverpod` (v2.6.1).
-* **IA Generativa Multimodal:** `firebase_ai` (`gemini-3.1-flash-image`) + Fallback REST a Google AI Developer API.
-* **Base de Datos & Almacenamiento:** Cloud Firestore (`UserCards`) y Firebase Storage (`user_cards/`) bajo estrategia **Zero-Auth**.
-* **Plugin de Agentes:** [`senior-dev-flutter`](.agents/plugins/senior-dev-flutter) de [jggomez/expert-ai-developer-skills](https://github.com/jggomez/expert-ai-developer-skills).
+```bash
+# Run static analysis
+dart analyze
+
+# Run all automated tests
+flutter test
+```
 
 ---
 
-## 📄 Licencia
+## 🤝 Contributing & Community
 
-Este proyecto está disponible bajo la licencia Apache 2.0. Desarrollado con pasión para la comunidad de Flutter en América Latina. 🌴💙🦜
+Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/jggomez/photo-booth/issues).
+
+---
+
+## 📄 License
+
+This project is licensed under the **Apache License 2.0** — see the [LICENSE](LICENSE) file for details.

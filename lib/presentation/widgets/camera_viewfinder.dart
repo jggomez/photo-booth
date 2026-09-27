@@ -9,6 +9,11 @@ class CameraViewfinder extends StatelessWidget {
   final VoidCallback onUploadPressed;
   final VoidCallback onRetakePressed;
   final bool isLoading;
+  final String? takePhotoLabel;
+  final String? uploadPhotoLabel;
+  final String? retakePhotoLabel;
+  final String? titleLabel;
+  final String? subtitleLabel;
 
   const CameraViewfinder({
     super.key,
@@ -17,6 +22,11 @@ class CameraViewfinder extends StatelessWidget {
     required this.onUploadPressed,
     required this.onRetakePressed,
     this.isLoading = false,
+    this.takePhotoLabel,
+    this.uploadPhotoLabel,
+    this.retakePhotoLabel,
+    this.titleLabel,
+    this.subtitleLabel,
   });
 
   @override
@@ -91,18 +101,19 @@ class CameraViewfinder extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        '¡Sonríe para tu Dash Credencial!',
-                        style: TextStyle(
+                      Text(
+                        titleLabel ?? '¡Sonríe para tu Dash Credencial!',
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 6),
-                      const Text(
-                        'Captura con tu cámara o sube una imagen',
-                        style: TextStyle(
+                      Text(
+                        subtitleLabel ??
+                            'Captura con tu cámara o sube una imagen',
+                        style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.textSecondary,
                         ),
@@ -132,7 +143,7 @@ class CameraViewfinder extends StatelessWidget {
                   ? ElevatedButton.icon(
                       onPressed: isLoading ? null : onRetakePressed,
                       icon: const Icon(Icons.refresh, size: 20),
-                      label: const Text('Tomar otra foto'),
+                      label: Text(retakePhotoLabel ?? 'Tomar otra foto'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor:
                             AppColors.surfaceDark.withValues(alpha: 0.85),
@@ -149,7 +160,7 @@ class CameraViewfinder extends StatelessWidget {
                           child: ElevatedButton.icon(
                             onPressed: isLoading ? null : onCapturePressed,
                             icon: const Icon(Icons.camera_alt, size: 20),
-                            label: const Text('Cámara'),
+                            label: Text(takePhotoLabel ?? 'Cámara'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.flutterBlue,
                               foregroundColor: AppColors.textPrimary,
@@ -164,7 +175,7 @@ class CameraViewfinder extends StatelessWidget {
                           child: OutlinedButton.icon(
                             onPressed: isLoading ? null : onUploadPressed,
                             icon: const Icon(Icons.upload_file, size: 20),
-                            label: const Text('Subir'),
+                            label: Text(uploadPhotoLabel ?? 'Subir'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.dashCyan,
                               side: const BorderSide(

@@ -9,6 +9,10 @@ class NameEmailForm extends StatelessWidget {
   final void Function(String)? onNameChanged;
   final void Function(String)? onEmailChanged;
   final bool enabled;
+  final String? nameLabel;
+  final String? nameHint;
+  final String? emailLabel;
+  final String? emailHint;
 
   const NameEmailForm({
     super.key,
@@ -17,6 +21,10 @@ class NameEmailForm extends StatelessWidget {
     this.onNameChanged,
     this.onEmailChanged,
     this.enabled = true,
+    this.nameLabel,
+    this.nameHint,
+    this.emailLabel,
+    this.emailHint,
   });
 
   @override
@@ -30,8 +38,8 @@ class NameEmailForm extends StatelessWidget {
           onChanged: onNameChanged,
           textCapitalization: TextCapitalization.words,
           decoration: InputDecoration(
-            labelText: 'Nombre completo',
-            hintText: 'Ej. Valeria Gomez',
+            labelText: nameLabel ?? 'Nombre completo',
+            hintText: nameHint ?? 'Ej. Valeria Gomez',
             prefixIcon:
                 const Icon(Icons.person_outline, color: AppColors.dashCyan),
             filled: true,
@@ -51,8 +59,8 @@ class NameEmailForm extends StatelessWidget {
           onChanged: onEmailChanged,
           keyboardType: TextInputType.emailAddress,
           decoration: InputDecoration(
-            labelText: 'Correo del asistente',
-            hintText: 'Ej. valeria@flutter.latam',
+            labelText: emailLabel ?? 'Correo del asistente',
+            hintText: emailHint ?? 'Ej. valeria@gmail.com',
             prefixIcon: const Icon(Icons.email_outlined,
                 color: AppColors.caribbeanTeal),
             filled: true,

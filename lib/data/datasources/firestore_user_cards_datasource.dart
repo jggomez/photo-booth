@@ -27,4 +27,22 @@ class FirestoreUserCardsDataSource {
           .toList();
     });
   }
+
+  /// Deletes all documents in `UserCards` collection in batches of up to 500.
+  Future<void> deleteAllCards() async {
+    final snapshot = await _collection.get();
+    if (snapshot.docs.isEmpty) return;
+
+    const batchSize = 500;
+    for (int i = 0; i < snapshot.docs.length; i += batchSize) {
+      final batch = _firestore.batch();
+      final end = (i + batchSize < snapshot.docs.length)
+          ? i + batchSize
+          : snapshot.docs.length;
+      for (int j = i; j < end; j++) {
+        batch.delete(snapshot.docs[j].reference);
+      }
+      await batch.commit();
+    }
+  }
 }

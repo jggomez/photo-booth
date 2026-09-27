@@ -7,12 +7,14 @@ import '../theme/app_colors.dart';
 class CommunityBadgeItem extends StatefulWidget {
   final UserCard card;
   final int index;
+  final String? communityTagline;
   final VoidCallback onTap;
 
   const CommunityBadgeItem({
     super.key,
     required this.card,
     this.index = 0,
+    this.communityTagline,
     required this.onTap,
   });
 
@@ -183,16 +185,16 @@ class _CommunityBadgeItemState extends State<CommunityBadgeItem> {
                           ],
                         ),
                         const SizedBox(height: 2),
-                        const Row(
+                        Row(
                           children: [
-                            Icon(Icons.wb_sunny,
+                            const Icon(Icons.wb_sunny,
                                 size: 10, color: Color(0xFFF59E0B)),
-                            SizedBox(width: 3),
+                            const SizedBox(width: 3),
                             Expanded(
                               child: Text(
-                                'Cancún • FlutterConf',
+                                widget.communityTagline ?? 'Quito • DevFest',
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w500,
                                   color: Color(0xFF475569),
