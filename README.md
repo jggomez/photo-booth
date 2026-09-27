@@ -196,6 +196,89 @@ Once deployment completes, Firebase CLI will output your live URL:
 
 ---
 
+## 💰 Real-World Event Cost Estimation (50, 100 & 200 Attendees)
+
+A common question from speakers and event organizers is: **"How much will it actually cost me to run EventBooth during my talk or conference track?"**
+
+Because Firebase operates on a generous **Pay-As-You-Go (Blaze Plan)** model with included monthly free tiers, hosting an interactive session with EventBooth costs **less than a cup of coffee**.
+
+### 📊 Quick Cost Summary Matrix
+
+| Service | 50 Attendees | 100 Attendees | 200 Attendees | Pricing Model & Notes |
+| :--- | :---: | :---: | :---: | :--- |
+| **Firebase Vertex AI** <br>*(Gemini Multimodal / Image Gen)* | **~$1.50 - $1.75** | **~$3.00 - $3.50** | **~$6.00 - $7.00** | ~$0.030 - $0.035 / generated badge *(based on 1–1.1 generations/attendee)* |
+| **Cloud Firestore** <br>*(Live Database & Wall)* | **$0.00** | **$0.00** | **$0.00** | 100% Free *(within 50,000 daily free reads & 20,000 writes)* |
+| **Cloud Storage** <br>*(Badge PNGs & Assets)* | **$0.00** | **$0.00** | **$0.00** | 100% Free *(within 5 GB free storage & 1 GB daily egress)* |
+| **Firebase Hosting** <br>*(Flutter Web CDN)* | **$0.00** | **~$0.02** | **~$0.05** | First 360 MB/day free; $0.15/GB thereafter |
+| **TOTAL ESTIMATED COST** | <mark>**~$1.50 - $1.75 USD**</mark> | <mark>**~$3.00 - $3.55 USD**</mark> | <mark>**~$6.05 - $7.05 USD**</mark> | **Total per talk / workshop** |
+
+---
+
+### 🔍 Detailed Service-by-Service Breakdown
+
+#### 1. Firebase Vertex AI (Multimodal AI Badge Generation)
+- **Model**: `gemini-3.1-flash-image` (or Gemini 2.5 Flash / Imagen 3 generation pipeline).
+- **Inference Cost**:
+  - **Input Prompt**: ~300 text tokens + 1 attendee selfie (258 image tokens) = ~558 tokens → **~$0.00004 USD** per generation (virtually negligible).
+  - **Image Output**: Vertex AI image generation standard output is billed at **~$0.030 USD per generated image**.
+  - **Buffer Calculation**: Assuming a 10% re-take / regeneration rate (e.g., 55 generations for 50 attendees, 110 for 100 attendees, 220 for 200 attendees):
+    - **50 Attendees**: $0.030 × 55 = **~$1.65 USD**
+    - **100 Attendees**: $0.030 × 110 = **~$3.30 USD**
+    - **200 Attendees**: $0.030 × 220 = **~$6.60 USD**
+
+#### 2. Cloud Firestore (Attendee Badges & Live Wall Sync)
+- **Blaze Free Tier (Every Day)**:
+  - **50,000 document reads / day**
+  - **20,000 document writes / day**
+  - **1 GiB storage**
+- **Actual Event Consumption**:
+  - **Writes**: 50 to 200 attendee badge documents saved to the `UserCards` collection + 1–5 configuration updates = **<250 writes** (out of 20,000 free writes!).
+  - **Reads**: When attendees view the Live Community Photo Wall and the F1 Roulette, Firestore streams updates in real time. Even if 200 attendees keep the wall open for 45 minutes, total reads typically range between 5,000 and 15,000 reads = **<30% of the daily free tier**.
+  - **Cost**: **$0.00 USD (Always Free)**.
+
+#### 3. Cloud Storage for Firebase (Asset & Badge Files)
+- **Blaze Free Tier**:
+  - **5 GB stored data**
+  - **20,000 Class A upload operations / month**
+  - **50,000 Class B download operations / month**
+  - **1 GB egress / day**
+- **Actual Event Consumption**:
+  - Each badge image is compressed to ~200–350 KB.
+  - 100 badges = ~30 MB total storage (less than 0.6% of the 5 GB free tier).
+  - Total download egress from wall views: ~300–600 MB (well within 1 GB/day free egress).
+  - **Cost**: **$0.00 USD (Always Free)**.
+
+#### 4. Firebase Hosting (Flutter Web App Distribution)
+- **Blaze Free Tier**: 10 GB storage and 360 MB/day egress ($0.15/GB thereafter).
+- The compiled Flutter Web release bundle is ~4.5 MB and is cached by the attendees' mobile browsers.
+  - **50 Attendees**: ~225 MB download → **$0.00 USD (Covered by free tier)**.
+  - **100 Attendees**: ~450 MB download → **~$0.02 USD** egress.
+  - **200 Attendees**: ~900 MB download → **~$0.08 USD** egress.
+
+---
+
+### 💡 Pro-Tips for Speakers & Budget Control
+
+1. **🎁 $300 Google Cloud Free Trial**:
+   If you link your Firebase project to a new Google Cloud billing account, Google automatically grants **$300 USD in free credits** valid for 90 days. Under this trial, running EventBooth across dozens of conferences costs **$0.00 USD out of pocket**.
+2. **🛡️ Set a Firebase Budget Alert**:
+   In the Google Cloud Console or Firebase Console (*Billing & Payments*), set a budget alert of **$10.00 USD**. You will receive an automated email notification if your event reaches 50%, 90%, or 100% of this threshold.
+3. **🧹 Wipe Test Data Before Your Talk**:
+   Use the **"Borrar Muro de Fotos" (Clear Community Wall)** button in `/admin` before your session starts to reset badge counters and keep your live wall pristine for your attendees.
+
+---
+
+### 🏆 Return on Investment (ROI) Comparison
+
+| Solution | Typical Cost | Setup Time | Attendee Experience |
+| :--- | :---: | :---: | :--- |
+| **Traditional Physical Photobooth** <br>*(Rental hardware + physical printer + on-site technician)* | **$500 – $1,500+ USD** | 2–3 hours on site | Long physical lines, paper prints left on tables |
+| **EventBooth with Firebase Vertex AI** <br>*(Fully digital, serverless & open source)* | **$3.50 USD** <br>*(for 100 attendees)* | ~10 minutes | Instant AI transformation, digital badges, live wall, viral social sharing |
+
+> 💡 **Key Takeaway**: For less than the price of a single coffee, your conference talk gets a high-energy, memorable AI experience that attendees love sharing on LinkedIn and X/Twitter.
+
+---
+
 ## 🏛️ Architecture & Clean Code
 
 EventBooth strictly adheres to **Clean Architecture** and **SOLID principles**:
