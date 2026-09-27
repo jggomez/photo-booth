@@ -5,6 +5,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:cancun_dashbooth/domain/entities/event_config.dart';
 import 'package:cancun_dashbooth/domain/entities/user_card.dart';
 import 'package:cancun_dashbooth/domain/usecases/clear_community_wall_usecase.dart';
+import 'package:cancun_dashbooth/domain/usecases/get_event_config_usecase.dart';
 import 'package:cancun_dashbooth/domain/usecases/save_event_config_usecase.dart';
 import 'package:cancun_dashbooth/domain/usecases/upload_event_asset_usecase.dart';
 import 'package:cancun_dashbooth/presentation/providers/community_wall_provider.dart';
@@ -22,10 +23,14 @@ class MockUploadEventAssetUseCase extends Mock
 class MockClearCommunityWallUseCase extends Mock
     implements ClearCommunityWallUseCase {}
 
+class MockGetEventConfigUseCase extends Mock
+    implements GetEventConfigUseCase {}
+
 void main() {
   late MockSaveEventConfigUseCase mockSaveUseCase;
   late MockUploadEventAssetUseCase mockUploadUseCase;
   late MockClearCommunityWallUseCase mockClearUseCase;
+  late MockGetEventConfigUseCase mockGetUseCase;
 
   setUpAll(() {
     registerFallbackValue(EventConfig.defaultQuito());
@@ -35,6 +40,7 @@ void main() {
     mockSaveUseCase = MockSaveEventConfigUseCase();
     mockUploadUseCase = MockUploadEventAssetUseCase();
     mockClearUseCase = MockClearCommunityWallUseCase();
+    mockGetUseCase = MockGetEventConfigUseCase();
   });
 
   Widget createTestWidget({
@@ -43,10 +49,12 @@ void main() {
   }) {
     final cfg = initialConfig ?? EventConfig.defaultQuito();
     final cards = initialCards ?? [];
+    when(() => mockGetUseCase.execute()).thenAnswer((_) async => cfg);
     return ProviderScope(
       overrides: [
         currentEventConfigProvider.overrideWithValue(cfg),
         eventConfigStreamProvider.overrideWith((ref) => Stream.value(cfg)),
+        getEventConfigUseCaseProvider.overrideWithValue(mockGetUseCase),
         eventConfigNotifierProvider.overrideWith((ref) {
           return EventConfigNotifier(
             saveUseCase: mockSaveUseCase,
@@ -412,11 +420,24 @@ void main() {
       expect(keyField, findsOneWidget);
 
       // Verify toggle obscure
-      final visibilityBtn = find.byIcon(Icons.visibility_outlined);
+      final apiKeyCard = find.ancestor(
+        of: find.text('Configuración de Gemini AI API Key'),
+        matching: find.byType(Card),
+      );
+      final visibilityBtn = find.descendant(
+        of: apiKeyCard,
+        matching: find.byIcon(Icons.visibility_outlined),
+      );
       expect(visibilityBtn, findsOneWidget);
       await tester.tap(visibilityBtn);
       await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.visibility_off_outlined), findsOneWidget);
+      expect(
+        find.descendant(
+          of: apiKeyCard,
+          matching: find.byIcon(Icons.visibility_off_outlined),
+        ),
+        findsOneWidget,
+      );
 
       // Enter a new key
       await tester.enterText(keyField, 'AIzaSyNewCustomKey999');
@@ -472,6 +493,112 @@ void main() {
 
       expect(find.byType(OfficialBadgeCard), findsOneWidget);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('unlocks screen with custom PIN configured in event config (not just 2026)',
+        (tester) async {
+      final customConfig =
+          EventConfig.defaultQuito().copyWith(adminPin: '8888');
+
+      await tester.pumpWidget(createTestWidget(initialConfig: customConfig));
+
+      // Entering 2026 should fail
+      await tester.enterText(find.byType(TextField).first, '2026');
+      await tester.tap(find.text('Desbloquear'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('PIN incorrecto. Inténtalo de nuevo.'), findsOneWidget);
+      expect(find.byType(OfficialBadgeCard), findsNothing);
+
+      // Entering 8888 should succeed
+      await tester.enterText(find.byType(TextField).first, '8888');
+      await tester.tap(find.text('Desbloquear'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Configuración de EventBooth'), findsOneWidget);
+      expect(find.byType(OfficialBadgeCard), findsOneWidget);
+    });
+
+    testWidgets('changing PIN in admin panel and saving updates configuration and allows unlocking with new PIN',
+        (tester) async {
+      tester.view.physicalSize = const Size(1280, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      when(() => mockSaveUseCase.execute(any())).thenAnswer((_) async {});
+
+      await tester.pumpWidget(createTestWidget());
+      await unlockScreen(tester);
+
+      // Locate PIN field and change it to 5555
+      final pinField = find.widgetWithText(TextField, 'PIN Admin');
+      expect(pinField, findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        pinField,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.enterText(pinField, '5555');
+      await tester.pumpAndSettle();
+
+      // Tap Save
+      await tester.scrollUntilVisible(
+        find.text('Guardar Configuración en Vivo'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('Guardar Configuración en Vivo'));
+      await tester.pumpAndSettle();
+
+      final captured =
+          verify(() => mockSaveUseCase.execute(captureAny())).captured;
+      final savedConfig = captured.first as EventConfig;
+      expect(savedConfig.adminPin, equals('5555'));
+
+      // Update mockGetUseCase to return new config with PIN 5555
+      when(() => mockGetUseCase.execute()).thenAnswer((_) async => savedConfig);
+
+      // Lock panel
+      await tester.tap(find.byIcon(Icons.lock_outline));
+      await tester.pumpAndSettle();
+
+      // Try unlocking with old PIN 2026 -> should fail
+      await tester.enterText(find.byType(TextField).first, '2026');
+      await tester.tap(find.text('Desbloquear'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('PIN incorrecto. Inténtalo de nuevo.'), findsOneWidget);
+
+      // Try unlocking with new PIN 5555 -> should succeed!
+      await tester.enterText(find.byType(TextField).first, '5555');
+      await tester.tap(find.text('Desbloquear'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Configuración de EventBooth'), findsOneWidget);
+    });
+
+    testWidgets('toggles visibility for PIN input on lock screen and in admin form',
+        (tester) async {
+      tester.view.physicalSize = const Size(1280, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(createTestWidget());
+
+      // On lock screen: find eye icon and toggle
+      final lockEye = find.byIcon(Icons.visibility_outlined);
+      expect(lockEye, findsOneWidget);
+      await tester.tap(lockEye);
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.visibility_off_outlined), findsOneWidget);
+
+      await unlockScreen(tester);
+
+      // In admin form: verify eye icon for adminPinController
+      expect(find.byIcon(Icons.visibility_outlined), findsWidgets);
     });
   });
 }

@@ -45,7 +45,11 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
   late final TextEditingController _apiKeyController;
 
   bool _obscureApiKey = true;
+  bool _obscureAdminPin = true;
+  bool _obscurePinInput = true;
   bool _isUnlocked = false;
+  bool _isAuthenticating = false;
+  bool _hasUserModifiedForm = false;
   String? _pinError;
   bool _isSaving = false;
   bool _isUploadingAsset = false;
@@ -122,17 +126,45 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
     super.dispose();
   }
 
-  void _unlock() {
-    final currentConfig = ref.read(currentEventConfigProvider);
+  Future<void> _unlock() async {
+    final enteredPin = _pinInputController.text.trim();
+    if (enteredPin.isEmpty) return;
+
     final strings = AppStrings.get(ref.read(appLanguageProvider));
-    if (_pinInputController.text.trim() == currentConfig.adminPin) {
-      setState(() {
-        _isUnlocked = true;
-        _pinError = null;
-      });
-    } else {
+
+    setState(() {
+      _isAuthenticating = true;
+      _pinError = null;
+    });
+
+    try {
+      EventConfig config;
+      try {
+        config = await ref.read(getEventConfigUseCaseProvider).execute();
+      } catch (_) {
+        config = ref.read(currentEventConfigProvider);
+      }
+
+      if (enteredPin == config.adminPin) {
+        if (!mounted) return;
+        _populateFromConfig(config);
+        setState(() {
+          _isUnlocked = true;
+          _pinError = null;
+          _isAuthenticating = false;
+        });
+      } else {
+        if (!mounted) return;
+        setState(() {
+          _pinError = strings.pinIncorrect;
+          _isAuthenticating = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
         _pinError = strings.pinIncorrect;
+        _isAuthenticating = false;
       });
     }
   }
@@ -168,13 +200,29 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
   }
 
   void _applyPreset(void Function() presetAction) {
+    final currentPin = _adminPinController.text.trim();
     presetAction();
     final newConfig = ref.read(eventConfigNotifierProvider).config;
-    _populateFromConfig(newConfig);
+    _populateFromConfig(newConfig.copyWith(
+      adminPin: currentPin.isNotEmpty ? currentPin : newConfig.adminPin,
+    ));
+    _hasUserModifiedForm = true;
     setState(() {});
   }
 
   Future<void> _saveCurrentConfig() async {
+    final pin = _adminPinController.text.trim();
+    if (pin.length < 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'El PIN de administrador debe tener al menos 4 caracteres.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
     final working = _buildWorkingConfig();
     final success = await ref
@@ -185,6 +233,7 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
 
     final messenger = ScaffoldMessenger.of(context);
     if (success) {
+      _hasUserModifiedForm = false;
       messenger.showSnackBar(
         const SnackBar(
           content: Text('Configuración guardada en vivo exitosamente'),
@@ -192,9 +241,13 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
         ),
       );
     } else {
+      final errorState = ref.read(eventConfigNotifierProvider).saveStatus;
+      final errorMsg = errorState.hasError
+          ? '${errorState.error}'
+          : 'Error al guardar la configuración';
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Error al guardar la configuración'),
+        SnackBar(
+          content: Text(errorMsg),
           backgroundColor: AppColors.error,
         ),
       );
@@ -290,6 +343,15 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<EventConfig>>(eventConfigStreamProvider,
+        (prev, next) {
+      next.whenData((config) {
+        if (!_hasUserModifiedForm && !_isSaving) {
+          _populateFromConfig(config);
+        }
+      });
+    });
+
     final strings = AppStrings.get(ref.watch(appLanguageProvider));
     if (!_isUnlocked) {
       return _buildPinLockScaffold(strings);
@@ -342,16 +404,28 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
                 const SizedBox(height: 24),
                 TextField(
                   controller: _pinInputController,
-                  obscureText: true,
+                  obscureText: _obscurePinInput,
                   keyboardType: TextInputType.number,
                   autofocus: true,
                   decoration: InputDecoration(
                     labelText: strings.pinLabel,
                     prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePinInput
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        size: 20,
+                        color: AppColors.textSecondary,
+                      ),
+                      onPressed: () {
+                        setState(() => _obscurePinInput = !_obscurePinInput);
+                      },
+                    ),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),
-                  onSubmitted: (_) => _unlock(),
+                  onSubmitted: (_) => _isAuthenticating ? null : _unlock(),
                 ),
                 if (_pinError != null) ...[
                   const SizedBox(height: 12),
@@ -372,9 +446,18 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
-                    onPressed: _unlock,
-                    child: Text(strings.login,
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    onPressed: _isAuthenticating ? null : _unlock,
+                    child: _isAuthenticating
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.bgDark,
+                            ),
+                          )
+                        : Text(strings.login,
+                            style: const TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -443,7 +526,13 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
           IconButton(
             tooltip: 'Bloquear panel',
             icon: const Icon(Icons.lock_outline),
-            onPressed: () => setState(() => _isUnlocked = false),
+            onPressed: () {
+              setState(() {
+                _isUnlocked = false;
+                _pinInputController.clear();
+                _pinError = null;
+              });
+            },
           ),
           const SizedBox(width: 4),
         ],
@@ -731,19 +820,19 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
                   title: 'DevFest Quito 2026',
                   icon: Icons.flash_on,
                   color: AppColors.dashCyan,
-                  onTap: () => _applyPreset(notifier.applyQuitoPreset),
+                  onTap: () => _applyPreset(() => notifier.applyQuitoPreset(_adminPinController.text.trim())),
                 ),
                 _buildPresetButton(
                   title: 'Cancún 2026',
                   icon: Icons.beach_access,
                   color: AppColors.caribbeanTeal,
-                  onTap: () => _applyPreset(notifier.applyCancunPreset),
+                  onTap: () => _applyPreset(() => notifier.applyCancunPreset(_adminPinController.text.trim())),
                 ),
                 _buildPresetButton(
                   title: 'Genérico',
                   icon: Icons.public,
                   color: AppColors.sunshineAmber,
-                  onTap: () => _applyPreset(notifier.applyGenericPreset),
+                  onTap: () => _applyPreset(() => notifier.applyGenericPreset(_adminPinController.text.trim())),
                 ),
               ],
             ),
@@ -834,7 +923,19 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
                 label: strings.pinLabel,
                 hint: '2026',
                 icon: Icons.password,
-                obscureText: true,
+                obscureText: _obscureAdminPin,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureAdminPin
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    size: 20,
+                    color: AppColors.textSecondary,
+                  ),
+                  onPressed: () {
+                    setState(() => _obscureAdminPin = !_obscureAdminPin);
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -902,6 +1003,7 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
     required String hint,
     required IconData icon,
     bool obscureText = false,
+    Widget? suffixIcon,
   }) {
     return TextField(
       controller: controller,
@@ -910,11 +1012,15 @@ class _AdminConfigScreenState extends ConsumerState<AdminConfigScreen> {
         labelText: label,
         hintText: hint,
         prefixIcon: Icon(icon, size: 20),
+        suffixIcon: suffixIcon,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         filled: true,
         fillColor: AppColors.surfaceCard,
       ),
-      onChanged: (_) => setState(() {}),
+      onChanged: (_) {
+        _hasUserModifiedForm = true;
+        setState(() {});
+      },
     );
   }
 

@@ -49,26 +49,35 @@ class EventConfigNotifier extends StateNotifier<EventConfigState> {
     state = state.copyWith(config: config);
   }
 
-  void applyQuitoPreset() {
+  void applyQuitoPreset([String? customPin]) {
+    final pin = (customPin != null && customPin.trim().isNotEmpty)
+        ? customPin.trim()
+        : state.config.adminPin;
     state = state.copyWith(
       config: EventConfig.defaultQuito().copyWith(
-        adminPin: state.config.adminPin,
+        adminPin: pin,
       ),
     );
   }
 
-  void applyCancunPreset() {
+  void applyCancunPreset([String? customPin]) {
+    final pin = (customPin != null && customPin.trim().isNotEmpty)
+        ? customPin.trim()
+        : state.config.adminPin;
     state = state.copyWith(
       config: EventConfig.cancun().copyWith(
-        adminPin: state.config.adminPin,
+        adminPin: pin,
       ),
     );
   }
 
-  void applyGenericPreset() {
+  void applyGenericPreset([String? customPin]) {
+    final pin = (customPin != null && customPin.trim().isNotEmpty)
+        ? customPin.trim()
+        : state.config.adminPin;
     state = state.copyWith(
       config: EventConfig.generic().copyWith(
-        adminPin: state.config.adminPin,
+        adminPin: pin,
       ),
     );
   }

@@ -11,6 +11,7 @@ import '../../domain/repositories/i_event_config_repository.dart';
 import '../../domain/repositories/i_user_card_repository.dart';
 import '../../domain/usecases/clear_community_wall_usecase.dart';
 import '../../domain/usecases/generate_ai_badge_usecase.dart';
+import '../../domain/usecases/get_event_config_usecase.dart';
 import '../../domain/usecases/publish_user_card_usecase.dart';
 import '../../domain/usecases/get_community_stream_usecase.dart';
 import '../../domain/usecases/save_event_config_usecase.dart';
@@ -74,6 +75,10 @@ final getCommunityStreamUseCaseProvider =
 final watchEventConfigUseCaseProvider =
     Provider<WatchEventConfigUseCase>((ref) {
   return WatchEventConfigUseCase(ref.watch(eventConfigRepositoryProvider));
+});
+
+final getEventConfigUseCaseProvider = Provider<GetEventConfigUseCase>((ref) {
+  return GetEventConfigUseCase(ref.watch(eventConfigRepositoryProvider));
 });
 
 final saveEventConfigUseCaseProvider = Provider<SaveEventConfigUseCase>((ref) {
